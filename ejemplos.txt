@@ -1,0 +1,41 @@
+(STRING)#####################################################################
+""
+;;
+
+"abc"
+;;
+
+concat "para" "sol"
+;;
+
+concat (concat "para" "sol") "es"
+;;
+
+
+lambda s : String. s
+;;
+
+(lambda s : String. s) "abc" 
+;;
+
+letrec replicate : String -> Nat -> String =
+    lambda s : String. lambda n : Nat.
+        if iszero n then "" else concat s (replicate s (pred n))
+in 
+    replicate "abc" 3
+;;
+
+
+
+(RECURSIVIDAD)###############################################################
+letrec next : Nat -> Nat =
+    lambda n : Nat. succ n
+in
+    next 0
+;;
+
+letrec sum : Nat -> Nat -> Nat = 
+    lambda n : Nat. lambda m : Nat. if iszero n then m else succ (sum (pred n) m)
+in
+    sum 21 34
+;;

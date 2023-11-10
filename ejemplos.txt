@@ -25,12 +25,9 @@ prod 12 5
 letrec sum : Nat -> Nat -> Nat =
     lambda n : Nat. lambda m : Nat. if iszero n then m else succ (sum (pred n) m)
 in
-letrec prod : Nat -> Nat -> Nat =
-    lambda n : Nat. lambda m : Nat. if iszero m then 0 else sum n (prod n (pred m))
-in
 letrec fib : Nat -> Nat =
-    lambda n : Nat. if iszero (pred n) then 1 else sum (fib (pred n)) (fib (pred (pred n)))
-in fib 5;;  
+    lambda n : Nat. if iszero n then 0 else if iszero (pred n) then 1 else sum (fib (pred n)) (fib (pred (pred n)))
+in fib 7;;
 
 (FACTORIAL)
 letrec sum : Nat -> Nat -> Nat =
@@ -42,7 +39,7 @@ in
 letrec fac : Nat -> Nat =
     lambda n : Nat. if iszero n then 1 else prod n (fac (pred n))
 in fac 3
-;;
+;; 
 
 
 (2.2)(CONTEXTO DE DEFINICIONES GLOBALES)##########################################

@@ -8,8 +8,8 @@ open Lexer;;
 
 let rec read_command () =
 	let line = read_line () in
-	if line = ";;" then
-		""
+	if Str.last_chars line 2 = ";;" then
+		Str.string_before line (String.length line - 2) ^ ""
 	else
 		line ^ " " ^ read_command ()
 ;;

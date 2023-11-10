@@ -1,4 +1,30 @@
-(STRING)#####################################################################
+(2.1)(COMBINADOR DE PUNTO FIJO INTERNO)###############################################################
+letrec next : Nat -> Nat =
+    lambda n : Nat. succ n
+in
+    next 0
+;;
+
+(SUMA)
+letrec sum : Nat -> Nat -> Nat = 
+    lambda n : Nat. lambda m : Nat. if iszero n then m else succ (sum (pred n) m)
+in
+    sum 21 34
+;;
+
+(PRODUCTO)
+letrec sum : Nat -> Nat -> Nat =
+    lambda n : Nat. lambda m : Nat. if iszero n then m else succ (sum (pred n) m)
+in
+letrec prod : Nat -> Nat -> Nat =
+    lambda n : Nat. lambda m : Nat. if iszero m then 0 else sum n (prod n (pred m)) in 
+prod 12 5
+;;
+
+(2.2)(CONTEXTO DE DEFINICIONES GLOBALES)##########################################
+
+
+(2.3)(STRING)#####################################################################
 ""
 ;;
 
@@ -23,19 +49,4 @@ letrec replicate : String -> Nat -> String =
         if iszero n then "" else concat s (replicate s (pred n))
 in 
     replicate "abc" 3
-;;
-
-
-
-(RECURSIVIDAD)###############################################################
-letrec next : Nat -> Nat =
-    lambda n : Nat. succ n
-in
-    next 0
-;;
-
-letrec sum : Nat -> Nat -> Nat = 
-    lambda n : Nat. lambda m : Nat. if iszero n then m else succ (sum (pred n) m)
-in
-    sum 21 34
 ;;

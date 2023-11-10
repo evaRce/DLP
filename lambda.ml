@@ -61,7 +61,7 @@ let rec string_of_ty ty = match ty with
 exception Type_error of string
 ;;
 
-let rec typeof ctx tm = match tm with (*func que hace el chequeo de tipos, el q verifica/comprueba que un termino esta bien construido a nivel de tipos y al mismo tiempo nos dice el tipo del termino*)
+let rec typeof ctx tm = match tm with
 	(* T-True *)
 	TmTrue ->
 		TyBool
@@ -127,12 +127,12 @@ let rec typeof ctx tm = match tm with (*func que hace el chequeo de tipos, el q 
 
 	(* T-Fix *)
 	| TmFix t1 ->
-		let tyT1 = typeof ctx t1 in  (*tyT1 tendra que ser una funcion*)
+		let tyT1 = typeof ctx t1 in
 		(match tyT1 with
 			TyArr (tyT11, tyT12) ->
 				if tyT11 = tyT12 then tyT12
 				else raise (Type_error "result of body not compatible with domain")
-			| _ -> raise (Type_error "arrow type expected"))  (*entrara aqui si no es una funcion*)
+			| _ -> raise (Type_error "arrow type expected"))
 
 	(* new rule for string *)
 	| TmString _ ->
@@ -194,7 +194,7 @@ let rec lunion l1 l2 = match l1 with
 	| h::t -> if List.mem h l2 then lunion t l2 else h::(lunion t l2)
 ;;
 
-let rec free_vars tm = match tm with (*devuelve la lista de variables libres de un termino*)
+let rec free_vars tm = match tm with
 	TmTrue ->
 		[]
 	| TmFalse ->
@@ -229,7 +229,7 @@ let rec fresh_name x l =
 	if not (List.mem x l) then x else fresh_name (x ^ "'") l
 ;;
 
-let rec subst x s tm = match tm with (*funcion de substitucion que tmb hace pattern-matching*)
+let rec subst x s tm = match tm with
 	TmTrue ->
 		TmTrue
 	| TmFalse ->
@@ -270,13 +270,13 @@ let rec subst x s tm = match tm with (*funcion de substitucion que tmb hace patt
 		TmConcat (subst x s t1, subst x s t2)
 ;;
 
-let rec isnumericval tm = match tm with (*func aux q se usa en isval()*)
+let rec isnumericval tm = match tm with
     TmZero -> true
   | TmSucc t -> isnumericval t
   | _ -> false
 ;;
 
-let rec isval tm = match tm with (*func q indica que ya no se puede seguir evaluando*)
+let rec isval tm = match tm with
     TmTrue  -> true
   | TmFalse -> true
   | TmAbs _ -> true
@@ -365,16 +365,16 @@ let rec eval1 tm = match tm with
 		let t1' = eval1 t1 in
 		TmFix t1'
 
-	(* new rule for String, si ambos estan evaluados *)
+	(* new rule for String *)
 	| TmConcat (TmString s1, TmString s2) ->
 		TmString (s1 ^ s2)
 
-	(* new rule for String, si s1 esta evaluado y no t2 *)
+	(* new rule for String *)
 	| TmConcat (TmString s1, t2) ->
 		let t2' = eval1 t2 in
 		TmConcat (TmString s1, t2')
 
-	(* new rule for String, no esta ninguno evaluado *)
+	(* new rule for String *)
 	| TmConcat (t1, t2) ->
 		let t1' = eval1 t1 in
 		TmConcat (t1', t2)

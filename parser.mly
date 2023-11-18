@@ -38,7 +38,7 @@
 %%
 
 s :
-  	STRINGV EQ term EOF
+  	IDV EQ term EOF
   		{ Bind ($1, $3)}
   | term EOF
       { Eval $1 }
@@ -70,19 +70,19 @@ appTerm :
 		{ TmApp ($1, $2) }
 
 atomicTerm :
-    LPAREN term RPAREN
-      { $2 }
-  | TRUE
-      { TmTrue }
-  | FALSE
-      { TmFalse }
-  | IDV EQ term
-      { $3 }
-  | INTV
-      { let rec f = function
-            0 -> TmZero
-          | n -> TmSucc (f (n-1))
-        in f $1 }
+	LPAREN term RPAREN
+		{ $2 }
+	| TRUE
+		{ TmTrue }
+	| FALSE
+		{ TmFalse }
+	| IDV
+		{TmVar $1}
+	| INTV
+		{ let rec f = function
+				0 -> TmZero
+			| n -> TmSucc (f (n-1))
+			in f $1 }
 	| STRINGV
 		{ TmString $1 }
 

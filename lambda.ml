@@ -48,6 +48,18 @@ let getbinding ctx x =
 	List.assoc x ctx
 ;;
 
+let emptydef =
+	[]
+;;
+
+let adddef def x bind =
+	(x, bind) :: def
+;;
+
+let getdef def x =
+	List.assoc x def
+;;
+
 
 (* TYPE MANAGEMENT (TYPING) *)
 
@@ -404,9 +416,9 @@ let rec eval ctx tm =
 
 let execute (ctx, ctxt) = function
 	Eval tm ->
-		let tyTm = typeof ctxt tm in
+		let ty_tm = typeof ctxt tm in
 		let tm' = eval ctx tm in
-		print_endline("- : " ^ string_of_ty ^ " = " string_of_term tm');
+		print_endline("- : " ^ (string_of_ty ty_tm) ^ " = " ^ (string_of_term tm'));
 		(ctx, ctxt)
 	| Bind (s, tm) ->
 		let ty_tm = typeof ctxt tm in

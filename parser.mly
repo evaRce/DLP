@@ -77,7 +77,7 @@ atomicTerm :
   | FALSE
       { TmFalse }
   | IDV EQ term
-      { TmVar $3 }
+      { $3 }
   | INTV
       { let rec f = function
             0 -> TmZero

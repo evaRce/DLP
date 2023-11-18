@@ -16,7 +16,7 @@ let rec read_command () =
 
 let top_level_loop () =
 	print_endline "Evaluator of lambda expressions...";
-	let rec loop ctx =
+	let rec loop (ctx, ctxt) =
 		print_string ">> ";
 		flush stdout;
 	try
@@ -35,7 +35,7 @@ let top_level_loop () =
 		| End_of_file ->
 			print_endline "...bye!!!"
   in
-	loop (emptyctx, emptyctx)
+	loop (emptydef, emptyctx)
   ;;
 
 top_level_loop ()

@@ -21,7 +21,6 @@ type term =
   | TmVar of string
   | TmAbs of string * ty * term
   | TmApp of term * term
-  | TmLet of string * term
   | TmLetIn of string * term * term
   | TmFix of term
   | TmString of string
@@ -36,6 +35,9 @@ type action =
 val emptyctx : context;;
 val addbinding : context -> string -> ty -> context;;
 val getbinding : context -> string -> ty;;
+val emptydef : (string * term) list;;
+val adddef : (string * term) list -> string -> term -> (string * term) list;;
+val getdef : (string * term) list -> string -> term;;
 
 val string_of_ty : ty -> string;;
 exception Type_error of string;;
@@ -43,6 +45,6 @@ val typeof : context -> term -> ty;;
 
 val string_of_term : term -> string;;
 exception NoRuleApplies;;
-val eval : term -> term;;
+val eval : (string * term) list -> term -> term;;
 
-val execute : term * ty -> action -> term * ty;;
+val execute : (string * term) list * (string * ty) list -> action -> (string * term) list * (string * ty) list;;

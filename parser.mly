@@ -33,13 +33,15 @@
 %token <string> STRINGV
 
 %start s
-%type <Lambda.term> s
+%type <Lambda.action> s
 
 %%
 
 s :
-    term EOF
-      { $1 }
+  	STRINGV EQ term EOF
+  		{ Bind ($1, $3)}
+  | term EOF
+      { Eval $1 }
 
 term :
     appTerm
@@ -74,8 +76,8 @@ atomicTerm :
       { TmTrue }
   | FALSE
       { TmFalse }
-  | IDV
-      { TmVar $1 }
+  | IDV EQ term
+      { TmVar $3 }
   | INTV
       { let rec f = function
             0 -> TmZero

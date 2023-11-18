@@ -1,16 +1,12 @@
 (2.1)(COMBINADOR DE PUNTO FIJO INTERNO)###############################################################
 letrec next : Nat -> Nat =
     lambda n : Nat. succ n
-in
-    next 0
-;;
+in next 0;;
 
 (SUMA)
 letrec sum : Nat -> Nat -> Nat = 
     lambda n : Nat. lambda m : Nat. if iszero n then m else succ (sum (pred n) m)
-in
-    sum 21 34
-;;
+in sum 21 34;;
 
 (PRODUCTO)
 letrec sum : Nat -> Nat -> Nat =
@@ -18,8 +14,7 @@ letrec sum : Nat -> Nat -> Nat =
 in
 letrec prod : Nat -> Nat -> Nat =
     lambda n : Nat. lambda m : Nat. if iszero m then 0 else sum n (prod n (pred m)) in 
-prod 12 5
-;;
+prod 12 5;;
 
 (FIBONACCI)
 letrec sum : Nat -> Nat -> Nat =
@@ -38,36 +33,26 @@ letrec prod : Nat -> Nat -> Nat =
 in
 letrec fac : Nat -> Nat =
     lambda n : Nat. if iszero n then 1 else prod n (fac (pred n))
-in fac 3
-;; 
+in fac 3;; 
 
 
 (2.2)(CONTEXTO DE DEFINICIONES GLOBALES)##########################################
 
 
 (2.3)(STRING)#####################################################################
-""
-;;
+"";;
 
-"abc"
-;;
+"abc";;
 
-concat "para" "sol"
-;;
+concat "para" "sol";;
 
-concat (concat "para" "sol") "es"
-;;
+concat (concat "para" "sol") "es";;
 
+lambda s : String. s;;
 
-lambda s : String. s
-;;
-
-(lambda s : String. s) "abc" 
-;;
+(lambda s : String. s) "abc" ;;
 
 letrec replicate : String -> Nat -> String =
     lambda s : String. lambda n : Nat.
         if iszero n then "" else concat s (replicate s (pred n))
-in 
-    replicate "abc" 3
-;;
+in replicate "abc" 3;;

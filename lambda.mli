@@ -21,10 +21,16 @@ type term =
   | TmVar of string
   | TmAbs of string * ty * term
   | TmApp of term * term
+  | TmLet of string * term
   | TmLetIn of string * term * term
   | TmFix of term
   | TmString of string
   | TmConcat of term * term
+;;
+
+type action =
+    Eval of term
+    | Bind of string * term
 ;;
 
 val emptyctx : context;;
@@ -39,3 +45,4 @@ val string_of_term : term -> string;;
 exception NoRuleApplies;;
 val eval : term -> term;;
 
+val execute : term * ty -> action -> term * ty;;

@@ -29,6 +29,10 @@ type term =
 	| TmConcat of term * term
 ;;
 
+type action =
+	Eval of term
+	| Bind of string * term
+;;
 
 (* CONTEXT MANAGEMENT *)
 
@@ -288,7 +292,7 @@ let rec isval tm = match tm with
 exception NoRuleApplies
 ;;
 
-let rec eval1 tm = match tm with
+let rec eval1 ctx tm = match tm with
 	(* E-IfTrue *)
 	TmIf (TmTrue, t2, _) ->
 		t2
@@ -299,12 +303,12 @@ let rec eval1 tm = match tm with
 
 	(* E-If *)
 	| TmIf (t1, t2, t3) ->
-		let t1' = eval1 t1 in
+		let t1' = eval1 ctx t1 in
 		TmIf (t1', t2, t3)
 
 	(* E-Succ *)
 	| TmSucc t1 ->
-		let t1' = eval1 t1 in
+		let t1' = eval1 ctx t1 in
 		TmSucc t1'
 
 	(* E-PredZero *)
@@ -317,7 +321,7 @@ let rec eval1 tm = match tm with
 
 	(* E-Pred *)
 	| TmPred t1 ->
-		let t1' = eval1 t1 in
+		let t1' = eval1 ctx t1 in
 		TmPred t1'
 
 	(* E-IszeroZero *)
@@ -330,7 +334,7 @@ let rec eval1 tm = match tm with
 
 	(* E-Iszero *)
 	| TmIsZero t1 ->
-		let t1' = eval1 t1 in
+		let t1' = eval1 ctx t1 in
 		TmIsZero t1'
 
 	(* E-AppAbs *)
@@ -339,12 +343,12 @@ let rec eval1 tm = match tm with
 
 	(* E-App2: evaluate argument before applying function *)
 	| TmApp (v1, t2) when isval v1 ->
-		let t2' = eval1 t2 in
+		let t2' = eval1 ctx t2 in
 		TmApp (v1, t2')
 
 	(* E-App1: evaluate function before argument *)
 	| TmApp (t1, t2) ->
-		let t1' = eval1 t1 in
+		let t1' = eval1 ctx t1 in
 		TmApp (t1', t2)
 
 	(* E-LetV *)
@@ -353,7 +357,7 @@ let rec eval1 tm = match tm with
 
 	(* E-Let *)
 	| TmLetIn(x, t1, t2) ->
-		let t1' = eval1 t1 in
+		let t1' = eval1 ctx t1 in
 		TmLetIn (x, t1', t2)
 	
 	(* E-FixBeta *)
@@ -362,7 +366,7 @@ let rec eval1 tm = match tm with
 
 	(* E-Fix *)
 	| TmFix t1 ->
-		let t1' = eval1 t1 in
+		let t1' = eval1 ctx t1 in
 		TmFix t1'
 
 	(* new rule for String *)
@@ -371,23 +375,44 @@ let rec eval1 tm = match tm with
 
 	(* new rule for String *)
 	| TmConcat (TmString s1, t2) ->
-		let t2' = eval1 t2 in
+		let t2' = eval1 ctx t2 in
 		TmConcat (TmString s1, t2')
 
 	(* new rule for String *)
 	| TmConcat (t1, t2) ->
-		let t1' = eval1 t1 in
+		let t1' = eval1 ctx t1 in
 		TmConcat (t1', t2)
+
+	| TmVar s ->
+		getbinding ctx s
 
 	| _ ->
 		raise NoRuleApplies
 ;;
 
-let rec eval tm =
-	try
-		let tm' = eval1 tm in
-		eval tm'
-	with
-		NoRuleApplies -> tm
+let give_ctx ctx tm =
+	List.fold_left (fun t x -> subst x (getbinding ctx x) t) tm (free_vars tm)
 ;;
+
+let rec eval ctx tm =
+	try
+		let tm' = eval1 ctx tm in
+		eval ctx tm'
+	with
+		NoRuleApplies -> give_ctx ctx tm
+;;
+
+let execute (ctx, ctxt) = function
+	Eval tm ->
+		let tyTm = typeof ctxt tm in
+		let tm' = eval ctx tm in
+		print_endline("- : " ^ string_of_ty ^ " = " string_of_term tm');
+		(ctx, ctxt)
+	| Bind (s, tm) ->
+		let ty_tm = typeof ctxt tm in
+		let tm' = eval ctx tm in
+		print_endline(s ^ " : " ^ string_of_ty ty_tm ^ " = " ^ string_of_term tm');
+		(addbinding ctx s tm', addbinding ctxt s ty_tm)
+;;
+
 

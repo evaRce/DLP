@@ -29,6 +29,10 @@ type term =
 	| TmConcat of term * term
 ;;
 
+type contextv =
+	(string * term) list
+;;
+
 type action =
 	Eval of term
 	| Bind of string * term

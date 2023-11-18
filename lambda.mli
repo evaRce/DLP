@@ -27,6 +27,10 @@ type term =
   | TmConcat of term * term
 ;;
 
+type contextv =
+  (string * term) list
+;;
+
 type action =
     Eval of term
     | Bind of string * term
@@ -35,9 +39,9 @@ type action =
 val emptyctx : context;;
 val addbinding : context -> string -> ty -> context;;
 val getbinding : context -> string -> ty;;
-val emptydef : (string * term) list;;
-val adddef : (string * term) list -> string -> term -> (string * term) list;;
-val getdef : (string * term) list -> string -> term;;
+val emptydef : contextv;;
+val adddef : contextv -> string -> term -> contextv;;
+val getdef : contextv -> string -> term;;
 
 val string_of_ty : ty -> string;;
 exception Type_error of string;;
@@ -45,6 +49,6 @@ val typeof : context -> term -> ty;;
 
 val string_of_term : term -> string;;
 exception NoRuleApplies;;
-val eval : (string * term) list -> term -> term;;
+val eval : contextv -> term -> term;;
 
-val execute : (string * term) list * (string * ty) list -> action -> (string * term) list * (string * ty) list;;
+val execute : contextv * context -> action -> contextv * context;;

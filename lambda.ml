@@ -27,6 +27,8 @@ type term =
 	| TmFix of term
 	| TmString of string
 	| TmConcat of term * term
+	| TmHead of term
+	| TmTail of term 
 ;;
 
 type contextv =
@@ -162,6 +164,14 @@ let rec typeof ctx tm = match tm with
 	| TmConcat (t1, t2) ->
 		if typeof ctx t1 = TyString && typeof ctx t2 = TyString then TyString
 		else raise (Type_error "argument of concat is not a string")
+
+	| TmHead t1 ->
+		if typeof ctx t1 = TyString then TyString
+		else raise (Type_error "argument of Head is not a string")
+
+	| TmTail t1 ->
+		if typeof ctx t1 = TyString then TyString
+		else raise (Type_error "argument of Tail is not a string")
 ;;
 
 
@@ -202,6 +212,10 @@ let rec string_of_term = function
 		"\"" ^ s ^ "\""
 	| TmConcat (t1, t2) ->
 		"concat " ^ "(" ^ string_of_term t1 ^ ")" ^ " " ^ "(" ^ string_of_term t2 ^ ")"
+	| TmHead t1 ->
+		"head " ^ string_of_term t1
+	| TmTail t1 ->
+		"tail " ^ string_of_term t1
 ;;
 
 let rec ldif l1 l2 = match l1 with
@@ -243,6 +257,10 @@ let rec free_vars tm = match tm with
 		[]
 	| TmConcat (t1, t2) ->
 		lunion (free_vars t1) (free_vars t2)
+	| TmHead t1 ->
+		free_vars t1
+	| TmTail t1 ->
+		free_vars t1
 ;;
 
 let rec fresh_name x l =
@@ -288,6 +306,10 @@ let rec subst x s tm = match tm with
 		TmString st
 	| TmConcat (t1, t2) ->
 		TmConcat (subst x s t1, subst x s t2)
+	| TmHead t1 ->
+		TmHead (subst x s t1)
+	| TmTail t1 ->
+		TmTail (subst x s t1)
 ;;
 
 let rec isnumericval tm = match tm with
@@ -398,6 +420,21 @@ let rec eval1 ctx tm = match tm with
 	| TmConcat (t1, t2) ->
 		let t1' = eval1 ctx t1 in
 		TmConcat (t1', t2)
+
+	| TmHead (TmString t1) ->
+		TmString (String.sub t1 0 1)
+
+	| TmHead t1 ->
+		let t1' = eval1 ctx t1 in
+		TmHead t1'
+
+	| TmTail (TmString t1) ->
+		TmString (String.sub t1 1 ((String.length t1)-1))
+
+
+	| TmTail t1 ->
+		let t1' = eval1 ctx t1 in
+		TmTail t1'
 
 	| TmVar s ->
 		getbinding ctx s

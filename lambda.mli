@@ -25,6 +25,8 @@ type term =
   | TmFix of term
   | TmString of string
   | TmConcat of term * term
+  | TmHead of term
+  | TmTail of term
 ;;
 
 type contextv =

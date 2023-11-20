@@ -11,6 +11,8 @@
 %token ELSE
 %token SUCC
 %token PRED
+%token HEAD
+%token TAIL
 %token ISZERO
 %token LET
 %token LETREC
@@ -62,6 +64,10 @@ appTerm :
 		{ TmSucc $2 }
 	| PRED atomicTerm
 		{ TmPred $2 }
+	| HEAD atomicTerm
+		{ TmHead $2}
+	| TAIL atomicTerm
+		{ TmTail $2}
 	| ISZERO atomicTerm
 		{ TmIsZero $2 }
 	| CONCAT atomicTerm atomicTerm

@@ -4,6 +4,7 @@ type ty =
   | TyNat
   | TyArr of ty * ty
   | TyString
+  | TySequence of ty list
 ;;
 
 type context =
@@ -27,6 +28,8 @@ type term =
   | TmConcat of term * term
   | TmHead of term
   | TmTail of term
+  | TmSequence of term * term
+  | TmTuple of term list
 ;;
 
 type contextv =

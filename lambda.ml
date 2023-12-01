@@ -6,6 +6,7 @@ type ty =
 	| TyNat
 	| TyArr of ty * ty
 	| TyString
+	| TySequence of ty list
 ;;
 
 type context =
@@ -29,6 +30,8 @@ type term =
 	| TmConcat of term * term
 	| TmHead of term
 	| TmTail of term 
+	| TmSequence of term * term
+	| TmTuple of term list
 ;;
 
 type contextv =
@@ -78,6 +81,12 @@ let rec string_of_ty ty = match ty with
 		"(" ^ string_of_ty ty1 ^ ")" ^ " -> " ^ "(" ^ string_of_ty ty2 ^ ")"
 	| TyString ->
 		"String"
+	| TySequence tyseq ->
+		let rec print = function
+			[] -> ""
+			| (ty::[]) -> (string_of_ty ty)
+			| (ty::t) -> (string_of_ty ty) ^ " , " ^ print t
+		in "{" ^ (print tyseq) ^ "}"
 ;;
 
 exception Type_error of string
@@ -172,6 +181,12 @@ let rec typeof ctx tm = match tm with
 	| TmTail t1 ->
 		if typeof ctx t1 = TyString then TyString
 		else raise (Type_error "argument of Tail is not a string")
+
+	| TmTuple tup ->
+		let rec types = function
+			[] -> []
+			|(tm::t) -> ((typeof ctx tm)::(types t))
+		in TySequence (types tup)
 ;;
 
 
@@ -216,6 +231,12 @@ let rec string_of_term = function
 		"head " ^ string_of_term t1
 	| TmTail t1 ->
 		"tail " ^ string_of_term t1
+	| TmTuple t1 ->
+		let rec print = function
+			[] -> ""
+			| (tm::[]) -> (string_of_term tm)
+			| (tm::t) -> (string_of_term tm) ^ " , " ^ print t
+		in "{" ^ (print t1) ^ "}"
 ;;
 
 let rec ldif l1 l2 = match l1 with
@@ -261,6 +282,11 @@ let rec free_vars tm = match tm with
 		free_vars t1
 	| TmTail t1 ->
 		free_vars t1
+	| TmTuple t1 ->
+		let rec freeseq = function
+			[] -> []
+			|(tm::t) -> lunion (free_vars tm) (freeseq t)
+		in freeseq t1
 ;;
 
 let rec fresh_name x l =
@@ -310,6 +336,11 @@ let rec subst x s tm = match tm with
 		TmHead (subst x s t1)
 	| TmTail t1 ->
 		TmTail (subst x s t1)
+	| TmTuple tup ->
+		let rec substseq = function
+			[] -> []
+			|(tm::t) -> (subst x s tm)::(substseq t)
+		in TmTuple (substseq tup)
 ;;
 
 let rec isnumericval tm = match tm with
@@ -435,6 +466,13 @@ let rec eval1 ctx tm = match tm with
 	| TmTail t1 ->
 		let t1' = eval1 ctx t1 in
 		TmTail t1'
+
+	| TmTuple t1 ->
+		let rec seq_eval = function
+			[] -> raise NoRuleApplies
+			|(tm::t) when isval tm -> tm::(seq_eval t)
+			|(tm::t) -> (eval1 ctx tm)::t
+		in TmTuple (seq_eval t1)
 
 	| TmVar s ->
 		getbinding ctx s

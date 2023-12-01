@@ -24,6 +24,8 @@
 
 %token LPAREN
 %token RPAREN
+%token LKEY
+%token RKEY
 %token DOT
 %token EQ
 %token COLON
@@ -91,6 +93,14 @@ atomicTerm :
 			in f $1 }
 	| STRINGV
 		{ TmString $1 }
+	| LKEY TmSequence RKEY
+		{ Tmtuple $2 }
+
+TmSequence:
+	| term COLON TmSequence
+		{ $1::$3 }
+	| term
+		{	[$1] }
 
 ty :
 	atomicTy
@@ -107,4 +117,12 @@ atomicTy :
 		{ TyNat }
 	| STRING
 		{ TyString }
+	| LKEY TySequence RKEY
+		{ Tytuple $2 }
+
+	TySequence:
+		| ty
+			{ [$1] }
+		| ty COLON TySequence
+			{ $1::$3 }
 

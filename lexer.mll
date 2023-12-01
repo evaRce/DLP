@@ -27,6 +27,8 @@ rule token = parse
   | "String"    { STRING }
   | '('         { LPAREN }
   | ')'         { RPAREN }
+  | '{'         { LKEY }
+  | '}'         { RKEY }
   | '.'         { DOT }
   | '='         { EQ }
   | ':'         { COLON }

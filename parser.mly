@@ -29,6 +29,7 @@
 %token DOT
 %token EQ
 %token COLON
+%token COMMA
 %token ARROW
 %token EOF
 
@@ -123,6 +124,6 @@ atomicTy :
 	TySequence:
 		| ty
 			{ [$1] }
-		| ty COLON TySequence
+		| ty COMMA TySequence
 			{ $1::$3 }
 

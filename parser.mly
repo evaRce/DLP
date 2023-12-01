@@ -98,7 +98,7 @@ atomicTerm :
 		{ TmTuple $2 }
 
 TmSequence:
-	| term COLON TmSequence
+	| term COMMA TmSequence
 		{ $1::$3 }
 	| term
 		{	[$1] }

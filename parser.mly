@@ -61,22 +61,30 @@ term :
 		{ TmLetIn ($2, TmFix (TmAbs ($2, $4, $6)), $8) }
 
 appTerm :
-	atomicTerm
+	accessTerm
 		{ $1 }
-	| SUCC atomicTerm
+	| SUCC accessTerm
 		{ TmSucc $2 }
-	| PRED atomicTerm
+	| PRED accessTerm
 		{ TmPred $2 }
-	| HEAD atomicTerm
+	| HEAD accessTerm
 		{ TmHead $2}
-	| TAIL atomicTerm
+	| TAIL accessTerm
 		{ TmTail $2}
-	| ISZERO atomicTerm
+	| ISZERO accessTerm
 		{ TmIsZero $2 }
-	| CONCAT atomicTerm atomicTerm
+	| CONCAT accessTerm accessTerm
 		{ TmConcat ($2, $3) }
-	| appTerm atomicTerm
+	| appTerm accessTerm
 		{ TmApp ($1, $2) }
+
+accessTerm :
+	accessTerm DOT INTV
+		{ TmGet ($1, (string_of_int $3))}
+	| accessTerm DOT STRINGV
+		{ TmGet ($1, $3)}
+	| atomicTerm
+		{ $1 }
 
 atomicTerm :
 	LPAREN term RPAREN
@@ -96,12 +104,22 @@ atomicTerm :
 		{ TmString $1 }
 	| LKEY TmSequence RKEY
 		{ TmTuple $2 }
+	| LKEY TmFieldSeq RKEY
+		{ TmRecord $2 }
 
 TmSequence:
 	| term COMMA TmSequence
 		{ $1::$3 }
 	| term
 		{	[$1] }
+
+TmFieldSeq:
+	| { [] }
+	|	non_empty { $1 }
+
+non_empty:
+	| STRINGV EQ term {[$1, $3]}
+	| STRINGV EQ term COMMA non_empty {($1, $3)::$5}
 
 ty :
 	atomicTy
@@ -120,10 +138,20 @@ atomicTy :
 		{ TyString }
 	| LKEY TySequence RKEY
 		{ TyTuple $2 }
+	| LKEY TyFieldSeq RKEY
+		{ TyRecord $2 }
 
-	TySequence:
-		| ty
-			{ [$1] }
-		| ty COMMA TySequence
-			{ $1::$3 }
+TyFieldSeq:
+	|	{ [] }
+	| non_empty_ty { $1 }
+
+non_empty_ty:
+	| STRINGV COLON ty {[$1, $3]}
+	|	STRINGV COLON ty COMMA non_empty_ty {($1, $3)::$5}
+
+TySequence:
+	| ty
+		{ [$1] }
+	| ty COMMA TySequence
+		{ $1::$3 }
 

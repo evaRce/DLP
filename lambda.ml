@@ -7,6 +7,7 @@ type ty =
 	| TyArr of ty * ty
 	| TyString
 	| TyTuple of ty list
+	| TyRecord of (string * ty) list
 ;;
 
 type context =
@@ -31,6 +32,7 @@ type term =
 	| TmHead of term
 	| TmTail of term 
 	| TmTuple of term list
+	| TmRecord of (string * term) list
 ;;
 
 type contextv =
@@ -86,6 +88,12 @@ let rec string_of_ty ty = match ty with
 			| (ty::[]) -> (string_of_ty ty)
 			| (ty::t) -> (string_of_ty ty) ^ " , " ^ print t
 		in "{" ^ (print tyseq) ^ "}"
+	| TyRecord tyfseq ->
+		let rec print = function
+			[] -> ""
+			| ((s,ty)::[]) -> s ^ ":" ^ (string_of_ty ty)
+			| ((s,ty)::t) -> s ^ ":" ^ (string_of_ty ty) ^ " , " ^ print t
+		in "{" ^ (print tyfseq) ^ "}"
 ;;
 
 exception Type_error of string
@@ -186,6 +194,21 @@ let rec typeof ctx tm = match tm with
 			[] -> []
 			|(tm::t) -> ((typeof ctx tm)::(types t))
 		in TyTuple (types tup)
+	| TmRecord reco ->
+		let rec types = function
+			[] -> []
+			|((s,tm)::t) -> ((s, typeof ctx tm)::(types t))
+		in TyRecord (types reco)
+	| TmGet (t, x) ->
+		(match(typeof ctx t, x) with
+			|(TyRecord (reco), s) ->
+				(try List.assoc s reco with
+				_ -> raise (Type_error (s ^ " key doesn't exist in record")))
+
+			|(TyTuple (tup), s) ->
+				(try List.nth tup (int_of_string s - 1) with
+				_ -> raise (Type_error (s ^ "is out of bounds for this tuple")))
+		|(y,_) -> raise (Type_error("Expected tuple or record type, got " ^ string_of_ty y)))
 ;;
 
 
@@ -236,6 +259,14 @@ let rec string_of_term = function
 			| (tm::[]) -> (string_of_term tm)
 			| (tm::t) -> (string_of_term tm) ^ " , " ^ print t
 		in "{" ^ (print t1) ^ "}"
+	| TmRecord t1 ->
+		let rec print = function
+			[] -> ""
+			| ((s,tm)::[]) -> s ^ "=" ^ (string_of_term tm)
+			| ((s,tm)::t) -> s ^ "=" ^ (string_of_term tm) ^ " , " ^ print t
+		in "{" ^ (print t1) ^ "}"
+	| TmGet (t, x) ->
+		string_of_term t ^ "." ^ n
 ;;
 
 let rec ldif l1 l2 = match l1 with
@@ -286,6 +317,13 @@ let rec free_vars tm = match tm with
 			[] -> []
 			|(tm::t) -> lunion (free_vars tm) (freeseq t)
 		in freeseq t1
+	| TmRecord t1 ->
+		let rec freefseq = function
+			[] -> []
+			|((_,tm)::t) -> lunion (free_vars tm) (freeseq t)
+		in freefseq t1
+	| TmGet (t, x) ->
+		free_vars t
 ;;
 
 let rec fresh_name x l =
@@ -340,6 +378,13 @@ let rec subst x s tm = match tm with
 			[] -> []
 			|(tm::t) -> (subst x s tm)::(substseq t)
 		in TmTuple (substseq tup)
+	| TmRecord reco ->
+		let rec substfseq = function
+			[] -> []
+			|((st,tm)::t) -> (st, (subst x s tm))::(substseq t)
+		in TmRecord (substfseq reco)
+	| TmGet (t, y) ->
+		TmGet (subst x s t, y)
 ;;
 
 let rec isnumericval tm = match tm with
@@ -353,6 +398,8 @@ let rec isval tm = match tm with
   | TmFalse -> true
   | TmAbs _ -> true
   | TmString _ -> true
+  | TmTuple l -> List.for_all(fun t -> isval(t)) l
+  | TmRecord l -> List.for_all(fun (s,t) -> isval(t)) l
   | t when isnumericval t -> true
   | _ -> false
 ;;
@@ -472,6 +519,25 @@ let rec eval1 ctx tm = match tm with
 			|(tm::t) when isval tm -> tm::(seq_eval t)
 			|(tm::t) -> (eval1 ctx tm)::t
 		in TmTuple (seq_eval t1)
+
+	| TmRecord t1 ->
+		let rec field_seq_eval = function
+			[] -> raise NoRuleApplies
+			|((st, tm)::t) when isval tm -> (st, tm)::(seq_eval t)
+			|((st, tm)::t) -> (st, (eval1 ctx tm))::t
+		in TmRecord (field_seq_eval t1)
+
+	| TmGet (TmRecord l as v, s) when isval(v) ->
+		List.assoc s l
+
+	| TmGet (TmRecord (reco), x) ->
+		List.assoc x reco
+
+	| TmGet (TmTuple l as v, s) when isval(v) ->
+		List.nth l (int_of_string s - 1)
+
+	| TmGet (t, x) ->
+		TmGet ((eval1 ctx t), x)
 
 	| TmVar s ->
 		getbinding ctx s

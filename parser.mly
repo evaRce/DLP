@@ -81,7 +81,7 @@ appTerm :
 accessTerm :
 	accessTerm DOT INTV
 		{ TmGet ($1, (string_of_int $3))}
-	| accessTerm DOT STRINGV
+	| accessTerm DOT IDV
 		{ TmGet ($1, $3)}
 	| atomicTerm
 		{ $1 }
@@ -108,18 +108,21 @@ atomicTerm :
 		{ TmRecord $2 }
 
 TmSequence:
-	| term COMMA TmSequence
+	term COMMA TmSequence
 		{ $1::$3 }
 	| term
 		{	[$1] }
 
 TmFieldSeq:
-	| { [] }
-	|	non_empty { $1 }
+	{ [] }
+	| non_empty
+		{ $1 }
 
 non_empty:
-	| STRINGV EQ term {[$1, $3]}
-	| STRINGV EQ term COMMA non_empty {($1, $3)::$5}
+	IDV EQ term
+		{[$1, $3]}
+	| IDV EQ term COMMA non_empty
+		{($1, $3)::$5}
 
 ty :
 	atomicTy
@@ -142,12 +145,15 @@ atomicTy :
 		{ TyRecord $2 }
 
 TyFieldSeq:
-	|	{ [] }
-	| non_empty_ty { $1 }
+	{ [] }
+	| non_empty_ty
+		{ $1 }
 
 non_empty_ty:
-	| STRINGV COLON ty {[$1, $3]}
-	|	STRINGV COLON ty COMMA non_empty_ty {($1, $3)::$5}
+	IDV COLON ty
+		{[$1, $3]}
+	| IDV COLON ty COMMA non_empty_ty
+		{($1, $3)::$5}
 
 TySequence:
 	| ty

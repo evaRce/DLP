@@ -208,7 +208,7 @@ let rec typeof ctx tm = match tm with
 
 			|(TyTuple (tup), s) ->
 				(try List.nth tup (int_of_string s - 1) with
-				_ -> raise (Type_error (s ^ "is out of bounds for this tuple")))
+				_ -> raise (Type_error (s ^ " is out of bounds for this tuple")))
 		|(y,_) -> raise (Type_error("Expected tuple or record type, got " ^ string_of_ty y)))
 ;;
 

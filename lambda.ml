@@ -6,7 +6,7 @@ type ty =
 	| TyNat
 	| TyArr of ty * ty
 	| TyString
-	| TySequence of ty list
+	| TyTuple of ty list
 ;;
 
 type context =
@@ -30,7 +30,6 @@ type term =
 	| TmConcat of term * term
 	| TmHead of term
 	| TmTail of term 
-	| TmSequence of term * term
 	| TmTuple of term list
 ;;
 
@@ -81,7 +80,7 @@ let rec string_of_ty ty = match ty with
 		"(" ^ string_of_ty ty1 ^ ")" ^ " -> " ^ "(" ^ string_of_ty ty2 ^ ")"
 	| TyString ->
 		"String"
-	| TySequence tyseq ->
+	| TyTuple tyseq ->
 		let rec print = function
 			[] -> ""
 			| (ty::[]) -> (string_of_ty ty)
@@ -186,7 +185,7 @@ let rec typeof ctx tm = match tm with
 		let rec types = function
 			[] -> []
 			|(tm::t) -> ((typeof ctx tm)::(types t))
-		in TySequence (types tup)
+		in TyTuple (types tup)
 ;;
 
 

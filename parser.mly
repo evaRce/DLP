@@ -94,7 +94,7 @@ atomicTerm :
 	| STRINGV
 		{ TmString $1 }
 	| LKEY TmSequence RKEY
-		{ Tmtuple $2 }
+		{ TmTuple $2 }
 
 TmSequence:
 	| term COLON TmSequence
@@ -118,7 +118,7 @@ atomicTy :
 	| STRING
 		{ TyString }
 	| LKEY TySequence RKEY
-		{ Tytuple $2 }
+		{ TyTuple $2 }
 
 	TySequence:
 		| ty

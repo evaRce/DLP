@@ -33,6 +33,7 @@ type term =
 	| TmTail of term 
 	| TmTuple of term list
 	| TmRecord of (string * term) list
+	| TmGet of term * string
 ;;
 
 type contextv =
@@ -266,7 +267,7 @@ let rec string_of_term = function
 			| ((s,tm)::t) -> s ^ "=" ^ (string_of_term tm) ^ " , " ^ print t
 		in "{" ^ (print t1) ^ "}"
 	| TmGet (t, x) ->
-		string_of_term t ^ "." ^ n
+		string_of_term t ^ "." ^ x
 ;;
 
 let rec ldif l1 l2 = match l1 with
@@ -320,7 +321,7 @@ let rec free_vars tm = match tm with
 	| TmRecord t1 ->
 		let rec freefseq = function
 			[] -> []
-			|((_,tm)::t) -> lunion (free_vars tm) (freeseq t)
+			|((_,tm)::t) -> lunion (free_vars tm) (freefseq t)
 		in freefseq t1
 	| TmGet (t, x) ->
 		free_vars t
@@ -381,7 +382,7 @@ let rec subst x s tm = match tm with
 	| TmRecord reco ->
 		let rec substfseq = function
 			[] -> []
-			|((st,tm)::t) -> (st, (subst x s tm))::(substseq t)
+			|((st,tm)::t) -> (st, (subst x s tm))::(substfseq t)
 		in TmRecord (substfseq reco)
 	| TmGet (t, y) ->
 		TmGet (subst x s t, y)
@@ -523,7 +524,7 @@ let rec eval1 ctx tm = match tm with
 	| TmRecord t1 ->
 		let rec field_seq_eval = function
 			[] -> raise NoRuleApplies
-			|((st, tm)::t) when isval tm -> (st, tm)::(seq_eval t)
+			|((st, tm)::t) when isval tm -> (st, tm)::(field_seq_eval t)
 			|((st, tm)::t) -> (st, (eval1 ctx tm))::t
 		in TmRecord (field_seq_eval t1)
 

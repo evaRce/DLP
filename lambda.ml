@@ -209,7 +209,7 @@ let rec typeof ctx tm = match tm with
 			|(TyTuple (tup), s) ->
 				(try List.nth tup (int_of_string s - 1) with
 				_ -> raise (Type_error (s ^ " is out of bounds for this tuple")))
-		|(y,_) -> raise (Type_error("Expected tuple or record type, got " ^ string_of_ty y)))
+			|(y,_) -> raise (Type_error("Expected tuple or record type, got " ^ string_of_ty y)))
 ;;
 
 
@@ -389,20 +389,20 @@ let rec subst x s tm = match tm with
 ;;
 
 let rec isnumericval tm = match tm with
-    TmZero -> true
-  | TmSucc t -> isnumericval t
-  | _ -> false
+	TmZero -> true
+	| TmSucc t -> isnumericval t
+	| _ -> false
 ;;
 
 let rec isval tm = match tm with
-    TmTrue  -> true
-  | TmFalse -> true
-  | TmAbs _ -> true
-  | TmString _ -> true
-  | TmTuple l -> List.for_all(fun t -> isval(t)) l
-  | TmRecord l -> List.for_all(fun (s,t) -> isval(t)) l
-  | t when isnumericval t -> true
-  | _ -> false
+	TmTrue  -> true
+	| TmFalse -> true
+	| TmAbs _ -> true
+	| TmString _ -> true
+	| TmTuple l -> List.for_all(fun t -> isval(t)) l
+	| TmRecord l -> List.for_all(fun (s,t) -> isval(t)) l
+	| t when isnumericval t -> true
+	| _ -> false
 ;;
 
 exception NoRuleApplies

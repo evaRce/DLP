@@ -1,41 +1,41 @@
 
 type ty =
     TyBool
-  | TyNat
-  | TyArr of ty * ty
-  | TyString
-  | TyTuple of ty list
-  | TyRecord of (string * ty) list
+	| TyNat
+	| TyArr of ty * ty
+	| TyString
+	| TyTuple of ty list
+	| TyRecord of (string * ty) list
 ;;
 
 type context =
-  (string * ty) list
+	(string * ty) list
 ;;
 
 type term =
     TmTrue
-  | TmFalse
-  | TmIf of term * term * term
-  | TmZero
-  | TmSucc of term
-  | TmPred of term
-  | TmIsZero of term
-  | TmVar of string
-  | TmAbs of string * ty * term
-  | TmApp of term * term
-  | TmLetIn of string * term * term
-  | TmFix of term
-  | TmString of string
-  | TmConcat of term * term
-  | TmHead of term
-  | TmTail of term
-  | TmTuple of term list
-  | TmRecord of (string * term) list
-  | TmGet of term * string
+	| TmFalse
+	| TmIf of term * term * term
+	| TmZero
+	| TmSucc of term
+	| TmPred of term
+	| TmIsZero of term
+	| TmVar of string
+	| TmAbs of string * ty * term
+	| TmApp of term * term
+	| TmLetIn of string * term * term
+	| TmFix of term
+	| TmString of string
+	| TmConcat of term * term
+	| TmHead of term
+	| TmTail of term
+	| TmTuple of term list
+	| TmRecord of (string * term) list
+	| TmGet of term * string
 ;;
 
 type contextv =
-  (string * term) list
+	(string * term) list
 ;;
 
 type action =

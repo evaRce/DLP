@@ -418,7 +418,7 @@ let rec subst x s tm = match tm with
 			[] -> []
 			|((st,tm)::t) -> (st, (subst x s tm))::(substfseq t)
 		in TmRecord (substfseq reco)
-	| TmRecord t1 ->
+	| TmVariant t1 ->
 		let rec substfseq = function
 			[] -> []
 			|((st,tm)::t) -> (st, (subst x s tm))::(substfseq t)
@@ -426,7 +426,7 @@ let rec subst x s tm = match tm with
 	| TmGet (t, y) ->
 		TmGet (subst x s t, y)
 	| TmAscr (y, tyY) ->
-		if y = x then s else tm
+		TmAscr (subst x s y, tyY)
 ;;
 
 let rec isnumericval tm = match tm with
@@ -590,8 +590,8 @@ let rec eval1 ctx tm = match tm with
 		TmGet ((eval1 ctx t), x)
 	
 	(* E-Ascribe *)
-	| TmAscr (t1, ty) ->
-		eval ctx t1
+	| TmAscr (t1, ty) when  isval(t1) ->
+		eval1 ctx t1
  
 	(* E-Ascribe1 *)
 	| TmAscr (t1, ty) ->
@@ -626,7 +626,7 @@ let execute (ctxv, ctxty) = function
 	| Evalty (tm, ty) ->
 		let ty_tm = typeof ctxty tm in
 		let tm' = eval ctxv tm in
-		print_endline("- : " ^ (string_of_ty ty) ^ " = " ^ (string_of_term tm'));
+		print_endline("- : " ^ (string_of_ty ty_tm) ^ " = " ^ (string_of_term tm'));
 		(ctxv, ctxty)
 	| Bind (s, tm) ->
 		let ty_tm = typeof ctxty tm in

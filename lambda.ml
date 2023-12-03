@@ -10,7 +10,7 @@ type ty =
 	| TyRecord of (string * ty) list
 ;;
 
-type context =
+type contextty =
 	(string * ty) list
 ;;
 
@@ -34,6 +34,7 @@ type term =
 	| TmTuple of term list
 	| TmRecord of (string * term) list
 	| TmGet of term * string
+	| TmAscr of term * ty
 ;;
 
 type contextv =
@@ -42,6 +43,7 @@ type contextv =
 
 type action =
 	Eval of term
+	| Evalty of term * ty
 	| Bind of string * term
 ;;
 
@@ -51,24 +53,24 @@ let emptyctx =
 	[]
 ;;
 
-let addbinding ctx x bind =
-	(x, bind) :: ctx
+let addbinding ctxty x bindty =
+	(x, bindty) :: ctxty
 ;;
 
-let getbinding ctx x =
-	List.assoc x ctx
+let getbinding ctxty x =
+	List.assoc x ctxty
 ;;
 
 let emptydef =
 	[]
 ;;
 
-let adddef def x bind =
-	(x, bind) :: def
+let adddef ctxv x bind =
+	(x, bind) :: ctxv
 ;;
 
-let getdef def x =
-	List.assoc x def
+let getdef ctxv x =
+	List.assoc x ctxv
 ;;
 
 
@@ -210,6 +212,10 @@ let rec typeof ctx tm = match tm with
 				(try List.nth tup (int_of_string s - 1) with
 				_ -> raise (Type_error (s ^ " is out of bounds for this tuple")))
 			|(y,_) -> raise (Type_error("Expected tuple or record type, got " ^ string_of_ty y)))
+	| TmAscr (x,ty) ->
+		if typeof ctx x = ty then ty
+		else raise (Type_error "ascription term's type doesn't match ascription's type")
+	
 ;;
 
 
@@ -268,6 +274,8 @@ let rec string_of_term = function
 		in "{" ^ (print t1) ^ "}"
 	| TmGet (t, x) ->
 		string_of_term t ^ "." ^ x
+	| TmAscr (t1, tyS) ->
+		string_of_term t1 ^ " as " ^ string_of_ty tyS
 ;;
 
 let rec ldif l1 l2 = match l1 with
@@ -325,6 +333,8 @@ let rec free_vars tm = match tm with
 		in freefseq t1
 	| TmGet (t, x) ->
 		free_vars t
+	| TmAscr _ ->
+		[]
 ;;
 
 let rec fresh_name x l =
@@ -386,6 +396,8 @@ let rec subst x s tm = match tm with
 		in TmRecord (substfseq reco)
 	| TmGet (t, y) ->
 		TmGet (subst x s t, y)
+	| TmAscr (y, tyY) ->
+		if y = x then s else tm
 ;;
 
 let rec isnumericval tm = match tm with
@@ -539,16 +551,25 @@ let rec eval1 ctx tm = match tm with
 
 	| TmGet (t, x) ->
 		TmGet ((eval1 ctx t), x)
+	
+	(* E-Ascribe *)
+	| TmAscr (t1, ty) ->
+		eval ctx t1
+ 
+	(* E-Ascribe1 *)
+	| TmAscr (t1, ty) ->
+		let t1' = eval1 ctx t1 in
+		TmAscr (t1',ty)
 
 	| TmVar s ->
-		getbinding ctx s
+		getdef ctx s
 
 	| _ ->
 		raise NoRuleApplies
 ;;
 
 let give_ctx ctx tm =
-	List.fold_left (fun t x -> subst x (getbinding ctx x) t) tm (free_vars tm)
+	List.fold_left (fun t x -> subst x (getdef ctx x) t) tm (free_vars tm)
 ;;
 
 let rec eval ctx tm =
@@ -559,17 +580,22 @@ let rec eval ctx tm =
 		NoRuleApplies -> give_ctx ctx tm
 ;;
 
-let execute (ctx, ctxt) = function
+let execute (ctxv, ctxty) = function
 	Eval tm ->
-		let ty_tm = typeof ctxt tm in
-		let tm' = eval ctx tm in
+		let ty_tm = typeof ctxty tm in
+		let tm' = eval ctxv tm in
 		print_endline("- : " ^ (string_of_ty ty_tm) ^ " = " ^ (string_of_term tm'));
-		(ctx, ctxt)
+		(ctxv, ctxty)
+	| Evalty (tm, ty) ->
+		let ty_tm = typeof ctxty tm in
+		let tm' = eval ctxv tm in
+		print_endline("- : " ^ (string_of_ty ty) ^ " = " ^ (string_of_term tm'));
+		(ctxv, ctxty)
 	| Bind (s, tm) ->
-		let ty_tm = typeof ctxt tm in
-		let tm' = eval ctx tm in
+		let ty_tm = typeof ctxty tm in
+		let tm' = eval ctxv tm in
 		print_endline(s ^ " : " ^ string_of_ty ty_tm ^ " = " ^ string_of_term tm');
-		(addbinding ctx s tm', addbinding ctxt s ty_tm)
+		(adddef ctxv s tm', addbinding ctxty s ty_tm)
 ;;
 
 

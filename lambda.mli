@@ -8,7 +8,7 @@ type ty =
 	| TyRecord of (string * ty) list
 ;;
 
-type context =
+type contextty =
 	(string * ty) list
 ;;
 
@@ -32,6 +32,7 @@ type term =
 	| TmTuple of term list
 	| TmRecord of (string * term) list
 	| TmGet of term * string
+	| TmAscr of term * ty
 ;;
 
 type contextv =
@@ -40,22 +41,23 @@ type contextv =
 
 type action =
     Eval of term
+	| Evalty of term * ty
     | Bind of string * term
 ;;
 
-val emptyctx : context;;
-val addbinding : context -> string -> ty -> context;;
-val getbinding : context -> string -> ty;;
+val emptyctx : contextty;;
+val addbinding : contextty -> string -> ty -> contextty;;
+val getbinding : contextty -> string -> ty;;
 val emptydef : contextv;;
 val adddef : contextv -> string -> term -> contextv;;
 val getdef : contextv -> string -> term;;
 
 val string_of_ty : ty -> string;;
 exception Type_error of string;;
-val typeof : context -> term -> ty;;
+val typeof : contextty -> term -> ty;;
 
 val string_of_term : term -> string;;
 exception NoRuleApplies;;
 val eval : contextv -> term -> term;;
 
-val execute : contextv * context -> action -> contextv * context;;
+val execute : contextv * contextty -> action -> contextv * contextty;;

@@ -21,6 +21,7 @@
 %token BOOL
 %token NAT
 %token STRING
+%token AS
 
 %token LPAREN
 %token RPAREN
@@ -36,7 +37,6 @@
 %token <int> INTV
 %token <string> IDV
 %token <string> STRINGV
-%token <string> STRINGT
 
 %start s
 %type <Lambda.action> s
@@ -45,9 +45,11 @@
 
 s :
   	IDV EQ term EOF
-  		{ Bind ($1, $3)}
+  		{ Bind ($1, $3) }
 	| term EOF
 		{ Eval $1 }
+	| term AS ty EOF
+		{ Evalty ($1, $3) }
 
 term :
     appTerm

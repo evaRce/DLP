@@ -80,6 +80,8 @@ appTerm :
 		{ TmIsZero $2 }
 	| CONCAT accessTerm accessTerm
 		{ TmConcat ($2, $3) }
+	| appTerm AS ty
+		{ TmAscr ($1, $3) }
 	| appTerm accessTerm
 		{ TmApp ($1, $2) }
 

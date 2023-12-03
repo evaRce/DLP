@@ -6,6 +6,7 @@ type ty =
 	| TyString
 	| TyTuple of ty list
 	| TyRecord of (string * ty) list
+    | TyVariant of (string * ty) list
 ;;
 
 type contextty =
@@ -31,6 +32,7 @@ type term =
 	| TmTail of term
 	| TmTuple of term list
 	| TmRecord of (string * term) list
+    | TmVariant of (string * term) list
 	| TmGet of term * string
 	| TmAscr of term * ty
 ;;

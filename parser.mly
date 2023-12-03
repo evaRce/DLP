@@ -23,6 +23,8 @@
 %token STRING
 %token AS
 
+%token LVAR
+%token RVAR
 %token LPAREN
 %token RPAREN
 %token LKEY
@@ -109,6 +111,8 @@ atomicTerm :
 		{ TmTuple $2 }
 	| LKEY TmFieldSeq RKEY
 		{ TmRecord $2 }
+	|	LVAR TmFieldSeq RVAR
+		{ TmVariant $2 }
 
 TmSequence:
 	term COMMA TmSequence
@@ -146,6 +150,8 @@ atomicTy :
 		{ TyTuple $2 }
 	| LKEY TyFieldSeq RKEY
 		{ TyRecord $2 }
+	| LVAR TyFieldSeq RVAR
+		{	TyVariant $2 }
 
 TyFieldSeq:
 	{ [] }

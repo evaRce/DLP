@@ -225,12 +225,9 @@ let rec typeof ctx tm = match tm with
 				(try List.nth tup (int_of_string s - 1) with
 				_ -> raise (Type_error (s ^ " is out of bounds for this tuple")))
 			|(y,_) -> raise (Type_error("Expected tuple or record type, got " ^ string_of_ty y)))
-	(* | TmAscr (x,ty) ->
-		if typeof ctx x = ty then ty
-		else raise (Type_error "ascription term's type doesn't match ascription's type") *)
 	| TmAscr (x,ty) ->
 		(match(typeof ctx x, ty) with
-			|(TyVariant (variant), type) ->
+			|(TyVariant (variant), TyVariant (ty4)) ->
 				let (s,tm) = List.nth variant 0 in
 				let rec types s' ty' = match ty' with
 					[] -> raise (Type_error "Field isn't found in the type passed to the ascription")
@@ -241,8 +238,9 @@ let rec typeof ctx tm = match tm with
 									types s2 t2
 							else
 								types s2 t2
-				in types s type
-			| _ -> raise (Type_error "ascription term's type doesn't match ascription's type"))
+				in types s ty4
+			| _ -> if typeof ctx x = ty then ty
+					else raise (Type_error "ascription term's type doesn't match ascription's type"))
 		
 ;;
 

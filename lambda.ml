@@ -234,9 +234,9 @@ let rec typeof ctx tm = match tm with
 							if s' = s2 then
 								if tm = ty2 then ty2
 								else 
-									types s2 t2
+									types s' t2
 							else
-								types s2 t2
+								types s' t2
 				in types s ty4
 			| _ -> if typeof ctx x = ty then ty
 					else raise (Type_error "ascription term's type doesn't match ascription's type"))

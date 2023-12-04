@@ -643,8 +643,13 @@ let execute (ctxv, ctxty) = function
 	| Bind (s, tm) ->
 		let ty_tm = typeof ctxty tm in
 		let tm' = eval ctxv tm in
-		print_endline(s ^ " : " ^ string_of_ty ty_tm ^ " = " ^ string_of_term tm');
-		(adddef ctxv s tm', addbinding ctxty s ty_tm)
+		(match tm' with
+			TmAscr _ ->
+				print_endline(s ^  " : " ^ string_of_term tm');
+				(adddef ctxv s tm', addbinding ctxty s ty_tm)
+			| _ ->
+				print_endline(s ^ " : " ^ string_of_ty ty_tm ^ " = " ^ string_of_term tm');
+				(adddef ctxv s tm', addbinding ctxty s ty_tm))
 ;;
 
 

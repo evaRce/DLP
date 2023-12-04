@@ -45,7 +45,6 @@ type contextv =
 
 type action =
 	Eval of term
-	| Evalty of term * ty
 	| Bind of string * term
 ;;
 
@@ -307,7 +306,7 @@ let rec string_of_term = function
 	| TmGet (t, x) ->
 		string_of_term t ^ "." ^ x
 	| TmAscr (t1, tyS) ->
-		string_of_term t1 ^ " as " ^ string_of_ty tyS
+		string_of_ty tyS ^ " = " ^ string_of_term t1
 ;;
 
 let rec ldif l1 l2 = match l1 with
@@ -634,13 +633,13 @@ let execute (ctxv, ctxty) = function
 	Eval tm ->
 		let ty_tm = typeof ctxty tm in
 		let tm' = eval ctxv tm in
-		print_endline("- : " ^ (string_of_ty ty_tm) ^ " = " ^ (string_of_term tm'));
-		(ctxv, ctxty)
-	| Evalty (tm, ty) ->
-		let ty_tm = typeof ctxty tm in
-		let tm' = eval ctxv tm in
-		print_endline("- : " ^ (string_of_ty ty_tm) ^ " = " ^ (string_of_term tm'));
-		(ctxv, ctxty)
+		(match tm' with
+			TmAscr _ ->
+				print_endline("- : " ^ (string_of_term tm'));
+				(ctxv, ctxty)
+			| _ ->
+				print_endline("- : " ^ (string_of_ty ty_tm) ^ " = " ^ (string_of_term tm'));
+				(ctxv, ctxty))
 	| Bind (s, tm) ->
 		let ty_tm = typeof ctxty tm in
 		let tm' = eval ctxv tm in

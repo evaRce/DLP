@@ -43,7 +43,6 @@ type contextv =
 
 type action =
     Eval of term
-	| Evalty of term * ty
     | Bind of string * term
 ;;
 

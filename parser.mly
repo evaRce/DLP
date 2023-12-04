@@ -50,8 +50,8 @@ s :
   		{ Bind ($1, $3) }
 	| term EOF
 		{ Eval $1 }
-	| term AS ty EOF
-		{ Evalty ($1, $3) }
+	// | term AS ty EOF
+	// 	{ Evalty ($1, $3) }
 
 term :
     appTerm

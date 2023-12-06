@@ -9,6 +9,7 @@ type ty =
 	| TyTuple of ty list
 	| TyRecord of (string * ty) list
 	| TyVariant of (string * ty) list
+	| TmVarTy of string
 ;;
 
 type contextty =
@@ -79,33 +80,36 @@ let getdef ctxv x =
 
 (* TYPE MANAGEMENT (TYPING) *)
 
-let rec string_of_ty ty = match ty with
+let rec string_of_ty ctxty ty = match ty with
 	TyBool ->
 		"Bool"
 	| TyNat ->
 		"Nat"
 	| TyArr (ty1, ty2) ->
-		"(" ^ string_of_ty ty1 ^ ")" ^ " -> " ^ "(" ^ string_of_ty ty2 ^ ")"
+		"(" ^ string_of_ty ctxty ty1 ^ ")" ^ " -> " ^ "(" ^ string_of_ty ctxty ty2 ^ ")"
 	| TyString ->
 		"String"
 	| TyTuple tyseq ->
 		let rec print = function
 			[] -> ""
-			| (ty::[]) -> (string_of_ty ty)
-			| (ty::t) -> (string_of_ty ty) ^ " , " ^ print t
+			| (ty::[]) -> (string_of_ty ctxty ty)
+			| (ty::t) -> (string_of_ty ctxty ty) ^ " , " ^ print t
 		in "{" ^ (print tyseq) ^ "}"
 	| TyRecord tyfseq ->
 		let rec print = function
 			[] -> ""
-			| ((s,ty)::[]) -> s ^ ":" ^ (string_of_ty ty)
-			| ((s,ty)::t) -> s ^ ":" ^ (string_of_ty ty) ^ " , " ^ print t
+			| ((s,ty)::[]) -> s ^ ":" ^ (string_of_ty ctxty ty)
+			| ((s,ty)::t) -> s ^ ":" ^ (string_of_ty ctxty ty) ^ " , " ^ print t
 		in "{" ^ (print tyfseq) ^ "}"
 	| TyVariant tyfseq ->
 		let rec print = function
 			[] -> ""
-			| ((s,ty)::[]) -> s ^ ":" ^ (string_of_ty ty)
-			| ((s,ty)::t) -> s ^ ":" ^ (string_of_ty ty) ^ " , " ^ print t
+			| ((s,ty)::[]) -> s ^ ":" ^ (string_of_ty ctxty ty)
+			| ((s,ty)::t) -> s ^ ":" ^ (string_of_ty ctxty ty) ^ " , " ^ print t
 		in "<" ^ (print tyfseq) ^ ">"
+	| TmVarTy sty ->
+		let ty = getbinding ctxty sty in
+		string_of_ty ctxty ty
 ;;
 
 exception Type_error of string
@@ -150,14 +154,25 @@ let rec typeof ctx tm = match tm with
 
 	(* T-Var *)
 	| TmVar x ->
-		(try getdef ctx x with
+		(try getbinding ctx x with
 		_ -> raise (Type_error ("no binding type for variable " ^ x)))
 
+	(* | TmVarTy x ->
+		(try getbinding ctx x with
+		_ -> raise (Type_error ("no binding type for variable " ^ x))) *)
+		(* lambda x : N. x *)
 	(* T-Abs *)
-	| TmAbs (x, tyT1, t2) ->
-		let ctx' = addbinding ctx x tyT1 in
-		let tyT2 = typeof ctx' t2 in
-		TyArr (tyT1, tyT2)
+	| TmAbs (x, tyT1S, t2) ->
+		(match (tyT1S) with
+			TmVarTy (s) ->
+				let tyT1 = getbinding ctx s in
+				let ctx' = addbinding ctx x tyT1 in
+				let tyT2 = typeof ctx' t2 in
+				TyArr (tyT1, tyT2)
+			| _ ->
+				let ctx' = addbinding ctx x tyT1S in
+				let tyT2 = typeof ctx' t2 in
+				TyArr (tyT1S, tyT2))
 
 	(* T-App *)
 	| TmApp (t1, t2) ->
@@ -225,10 +240,10 @@ let rec typeof ctx tm = match tm with
 			|(TyTuple (tup), s) ->
 				(try List.nth tup (int_of_string s - 1) with
 				_ -> raise (Type_error (s ^ " is out of bounds for this tuple")))
-			|(y,_) -> raise (Type_error("Expected tuple or record type, got " ^ string_of_ty y)))
+			|(y,_) -> raise (Type_error("Expected tuple or record type, got " ^ string_of_ty ctx y)))
 	| TmAscr (x,ty) ->
 		(match(typeof ctx x, ty) with
-			|(TyVariant (variant), TyVariant (ty4)) ->
+			|(TyVariant (variant), TyVariant (tyTy)) ->
 				let (s,tm) = List.nth variant 0 in
 				let rec types s' ty' = match ty' with
 					[] -> raise (Type_error "Field isn't found in the type passed to the ascription")
@@ -239,75 +254,101 @@ let rec typeof ctx tm = match tm with
 									types s' t2
 							else
 								types s' t2
-				in types s ty4
-			| _ -> if typeof ctx x = ty then ty
-					else raise (Type_error "ascription term's type doesn't match ascription's type"))
+				in types s tyTy
+			|(TyVariant (variant), TmVarTy (sty)) ->
+				let tyVar = getbinding ctx sty in
+					(match tyVar with
+						TyVariant (tyTy) ->
+							let (s,tm) = List.nth variant 0 in
+							let rec types s' ty' = match ty' with
+								[] -> raise (Type_error "Field isn't found in the type passed to the ascription")
+								| ((s2,ty2)::t2) ->
+										if s' = s2 then
+											if tm = ty2 then ty2
+											else 
+												types s' t2
+										else
+											types s' t2
+							in types s tyTy
+						| _ ->
+							raise (Type_error "ascription term's type doesn't match ascription's type"))
+			| _ -> 
+				match ty with
+					TmVarTy (sty) ->
+						let tyVar = getbinding ctx sty in
+						if typeof ctx x = tyVar then tyVar
+						else 
+							raise (Type_error "ascription term's type doesn't match ascription's type")
+					| _ -> 
+						if typeof ctx x = ty then ty
+						else 
+							raise (Type_error "ascription term's type doesn't match ascription's type"))
 ;;
 
 
 (* TERMS MANAGEMENT (EVALUATION) *)
 
-let rec string_of_term = function
+let rec string_of_term ctxty = function
 	TmTrue ->
 		"true"
 	| TmFalse ->
 		"false"
 	| TmIf (t1,t2,t3) ->
-		"if " ^ "(" ^ string_of_term t1 ^ ")" ^
-		" then " ^ "(" ^ string_of_term t2 ^ ")" ^
-		" else " ^ "(" ^ string_of_term t3 ^ ")"
+		"if " ^ "(" ^ string_of_term ctxty t1 ^ ")" ^
+		" then " ^ "(" ^ string_of_term ctxty t2 ^ ")" ^
+		" else " ^ "(" ^ string_of_term ctxty t3 ^ ")"
 	| TmZero ->
 		"0"
 	| TmSucc t ->
 		let rec f n t' = match t' with
 			TmZero -> string_of_int n
 		| TmSucc s -> f (n+1) s
-		| _ -> "succ " ^ "(" ^ string_of_term t ^ ")"
+		| _ -> "succ " ^ "(" ^ string_of_term ctxty t ^ ")"
 		in f 1 t
 	| TmPred t ->
-		"pred " ^ "(" ^ string_of_term t ^ ")"
+		"pred " ^ "(" ^ string_of_term ctxty t ^ ")"
 	| TmIsZero t ->
-		"iszero " ^ "(" ^ string_of_term t ^ ")"
+		"iszero " ^ "(" ^ string_of_term ctxty t ^ ")"
 	| TmVar s ->
 		s
 	| TmAbs (s, tyS, t) ->
-		"(lambda " ^ s ^ ":" ^ string_of_ty tyS ^ ". " ^ string_of_term t ^ ")"
+		"(lambda " ^ s ^ ":" ^ string_of_ty ctxty tyS ^ ". " ^ string_of_term ctxty t ^ ")"
 	| TmApp (t1, t2) ->
-		"(" ^ string_of_term t1 ^ " " ^ string_of_term t2 ^ ")"
+		"(" ^ string_of_term ctxty t1 ^ " " ^ string_of_term ctxty t2 ^ ")"
 	| TmLetIn (s, t1, t2) ->
-		"let " ^ s ^ " = " ^ string_of_term t1 ^ " in " ^ string_of_term t2
+		"let " ^ s ^ " = " ^ string_of_term ctxty t1 ^ " in " ^ string_of_term ctxty t2
 	| TmFix t ->
-		"(fix " ^ string_of_term t ^ ")"
+		"(fix " ^ string_of_term ctxty t ^ ")"
 	| TmString s ->
 		"\"" ^ s ^ "\""
 	| TmConcat (t1, t2) ->
-		"concat " ^ "(" ^ string_of_term t1 ^ ")" ^ " " ^ "(" ^ string_of_term t2 ^ ")"
+		"concat " ^ "(" ^ string_of_term ctxty t1 ^ ")" ^ " " ^ "(" ^ string_of_term ctxty t2 ^ ")"
 	| TmHead t1 ->
-		"head " ^ string_of_term t1
+		"head " ^ string_of_term ctxty t1
 	| TmTail t1 ->
-		"tail " ^ string_of_term t1
+		"tail " ^ string_of_term ctxty t1
 	| TmTuple t1 ->
 		let rec print = function
 			[] -> ""
-			| (tm::[]) -> (string_of_term tm)
-			| (tm::t) -> (string_of_term tm) ^ " , " ^ print t
+			| (tm::[]) -> (string_of_term ctxty tm)
+			| (tm::t) -> (string_of_term ctxty tm) ^ " , " ^ print t
 		in "{" ^ (print t1) ^ "}"
 	| TmRecord t1 ->
 		let rec print = function
 			[] -> ""
-			| ((s,tm)::[]) -> s ^ "=" ^ (string_of_term tm)
-			| ((s,tm)::t) -> s ^ "=" ^ (string_of_term tm) ^ " , " ^ print t
+			| ((s,tm)::[]) -> s ^ "=" ^ (string_of_term ctxty tm)
+			| ((s,tm)::t) -> s ^ "=" ^ (string_of_term ctxty tm) ^ " , " ^ print t
 		in "{" ^ (print t1) ^ "}"
 	| TmVariant t1 ->
 		let rec print = function
 			[] -> ""
-			| ((s,tm)::[]) -> s ^ "=" ^ (string_of_term tm)
-			| ((s,tm)::t) -> s ^ "=" ^ (string_of_term tm) ^ " , " ^ print t
+			| ((s,tm)::[]) -> s ^ "=" ^ (string_of_term ctxty tm)
+			| ((s,tm)::t) -> s ^ "=" ^ (string_of_term ctxty tm) ^ " , " ^ print t
 		in "<" ^ (print t1) ^ ">"
 	| TmGet (t, x) ->
-		string_of_term t ^ "." ^ x
+		string_of_term ctxty t ^ "." ^ x
 	| TmAscr (t1, tyS) ->
-		string_of_ty tyS ^ " = " ^ string_of_term t1
+		string_of_ty ctxty tyS ^ " = " ^ string_of_term ctxty t1
 ;;
 
 let rec ldif l1 l2 = match l1 with
@@ -636,27 +677,27 @@ let execute (ctxv, ctxty) = function
 		let tm' = eval ctxv tm in
 		(match tm' with
 			TmAscr _ ->
-				print_endline("- : " ^ (string_of_term tm'));
+				print_endline("- : " ^ (string_of_term ctxty tm'));
 				(ctxv, ctxty)
 			| _ ->
-				print_endline("- : " ^ (string_of_ty ty_tm) ^ " = " ^ (string_of_term tm'));
+				print_endline("- : " ^ (string_of_ty ctxty ty_tm) ^ " = " ^ (string_of_term ctxty tm'));
 				(ctxv, ctxty))
 	| Bind (s, tm) ->
 		let ty_tm = typeof ctxty tm in
 		let tm' = eval ctxv tm in
 		(match tm' with
 			TmAscr _ ->
-				print_endline(s ^  " : " ^ string_of_term tm');
+				print_endline(s ^  " : " ^ string_of_term ctxty tm');
 				(adddef ctxv s tm', addbinding ctxty s ty_tm)
 			| _ ->
-				print_endline(s ^ " : " ^ string_of_ty ty_tm ^ " = " ^ string_of_term tm');
+				print_endline(s ^ " : " ^ string_of_ty ctxty ty_tm ^ " = " ^ string_of_term ctxty tm');
 				(adddef ctxv s tm', addbinding ctxty s ty_tm))
 	| EvalTy s ->
 		let ty = getbinding ctxty s in
-		print_endline("- : " ^ string_of_ty ty);
+		print_endline("- : " ^ string_of_ty ctxty ty);
 		(ctxv, ctxty)
 	| BindTy (s, ty) ->
-		print_endline("type " ^ s ^ " : " ^ string_of_ty ty);
+		print_endline("type " ^ s ^ " : " ^ string_of_ty ctxty ty);
 		(ctxv, addbinding ctxty s ty)
 ;;
 

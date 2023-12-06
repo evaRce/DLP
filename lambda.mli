@@ -7,6 +7,7 @@ type ty =
 	| TyTuple of ty list
 	| TyRecord of (string * ty) list
     | TyVariant of (string * ty) list
+	| TmVarTy of string
 ;;
 
 type contextty =
@@ -55,11 +56,11 @@ val emptydef : contextv;;
 val adddef : contextv -> string -> term -> contextv;;
 val getdef : contextv -> string -> term;;
 
-val string_of_ty : ty -> string;;
+val string_of_ty : contextty -> ty -> string;;
 exception Type_error of string;;
 val typeof : contextty -> term -> ty;;
 
-val string_of_term : term -> string;;
+val string_of_term : contextty -> term -> string;;
 exception NoRuleApplies;;
 val eval : contextv -> term -> term;;
 

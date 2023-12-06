@@ -156,7 +156,9 @@ atomicTy :
 	| LKEY TyFieldSeq RKEY
 		{ TyRecord $2 }
 	| LVAR TyFieldSeq RVAR
-		{	TyVariant $2 }
+		{ TyVariant $2 }
+	| IDT
+		{ TmVarTy $1}
 
 TyFieldSeq:
 	{ [] }

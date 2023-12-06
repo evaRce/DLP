@@ -10,6 +10,7 @@ type ty =
 	| TyRecord of (string * ty) list
 	| TyVariant of (string * ty) list
 	| TmVarTy of string
+	| TyList of ty list
 ;;
 
 type contextty =
@@ -38,6 +39,7 @@ type term =
 	| TmVariant of (string * term) list
 	| TmGet of term * string
 	| TmAscr of term * ty
+	| TmList of term list
 ;;
 
 type contextv =
@@ -110,6 +112,12 @@ let rec string_of_ty ctxty ty = match ty with
 	| TmVarTy sty ->
 		let ty = getbinding ctxty sty in
 		string_of_ty ctxty ty
+	| TyList tyseq ->
+		let rec print = function
+			[] -> ""
+			| (ty::[]) -> (string_of_ty ctxty ty)
+			| (ty::t) -> (string_of_ty ctxty ty) ^ " , " ^ print t
+		in "[" ^ (print tyseq) ^ "]"
 ;;
 
 exception Type_error of string
@@ -283,6 +291,24 @@ let rec typeof ctx tm = match tm with
 						if typeof ctx x = ty then ty
 						else 
 							raise (Type_error "ascription term's type doesn't match ascription's type"))
+	| TmList list ->
+		(match (list) with
+			[] -> TyList []
+			|(tm::[]) ->
+				let ty = typeof ctx tm in
+				TyList [ty]
+			|(tm::t) -> 
+				let ty = typeof ctx tm in
+				let rec types ty' t' = 
+					match t' with
+						[] -> []
+						|(tm2::t2) -> 
+							if ty' = typeof ctx tm2 then
+								((ty')::(types ty' t2))
+							else
+								raise (Type_error "list is not homogeneous")
+				in TyList (ty::(types ty t))
+		)
 ;;
 
 
@@ -349,6 +375,12 @@ let rec string_of_term ctxty = function
 		string_of_term ctxty t ^ "." ^ x
 	| TmAscr (t1, tyS) ->
 		string_of_ty ctxty tyS ^ " = " ^ string_of_term ctxty t1
+	| TmList t1 ->
+		let rec print = function
+			[] -> ""
+			| (tm::[]) -> (string_of_term ctxty tm)
+			| (tm::t) -> (string_of_term ctxty tm) ^ " , " ^ print t
+		in "[" ^ (print t1) ^ "]"
 ;;
 
 let rec ldif l1 l2 = match l1 with
@@ -413,6 +445,11 @@ let rec free_vars tm = match tm with
 		free_vars t
 	| TmAscr _ ->
 		[]
+	| TmList t1 ->
+		let rec freeseq = function
+			[] -> []
+			|(tm::t) -> lunion (free_vars tm) (freeseq t)
+		in freeseq t1
 ;;
 
 let rec fresh_name x l =
@@ -481,6 +518,11 @@ let rec subst x s tm = match tm with
 		TmGet (subst x s t, y)
 	| TmAscr (y, tyY) ->
 		TmAscr (subst x s y, tyY)
+	| TmList list ->
+		let rec substseq = function
+			[] -> []
+			|(tm::t) -> (subst x s tm)::(substseq t)
+		in TmTuple (substseq list)
 ;;
 
 let rec isnumericval tm = match tm with
@@ -497,6 +539,7 @@ let rec isval tm = match tm with
 	| TmTuple l -> List.for_all(fun t -> isval(t)) l
 	| TmRecord l -> List.for_all(fun (s,t) -> isval(t)) l
 	| TmVariant l -> List.for_all(fun (s,t) -> isval(t)) l
+	| TmList l -> List.for_all(fun t -> isval(t)) l
 	| t when isnumericval t -> true
 	| _ -> false
 ;;
@@ -654,6 +697,13 @@ let rec eval1 ctx tm = match tm with
 
 	| TmVar s ->
 		getdef ctx s
+	
+	| TmList t1 ->
+		let rec seq_eval = function
+			[] -> raise NoRuleApplies
+			|(tm::t) when isval tm -> tm::(seq_eval t)
+			|(tm::t) -> (eval1 ctx tm)::t
+		in TmList (seq_eval t1)
 
 	| _ ->
 		raise NoRuleApplies

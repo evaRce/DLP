@@ -26,8 +26,10 @@ rule token = parse
 	| "Nat"       { NAT }
 	| "String"    { STRING }
 	| "as"        { AS }
-  | '<'         { LVAR }
-  | '>'         { RVAR }
+	| '['         { OBRACKET }
+	| ']'         { CBRACKET }
+	| '<'         { LVAR }
+	| '>'         { RVAR }
 	| '('         { LPAREN }
 	| ')'         { RPAREN }
 	| '{'         { LKEY }

@@ -22,6 +22,8 @@
 %token NAT
 %token STRING
 %token AS
+%token OBRACKET
+%token CBRACKET
 
 %token LVAR
 %token RVAR
@@ -116,8 +118,10 @@ atomicTerm :
 		{ TmTuple $2 }
 	| LKEY TmFieldSeq RKEY
 		{ TmRecord $2 }
-	|	LVAR TmFieldSeq RVAR
+	| LVAR TmFieldSeq RVAR
 		{ TmVariant $2 }
+	| OBRACKET TmSequence CBRACKET
+		{ TmList $2 }
 
 TmSequence:
 	term COMMA TmSequence
@@ -159,6 +163,8 @@ atomicTy :
 		{ TyVariant $2 }
 	| IDT
 		{ TmVarTy $1}
+	| OBRACKET TySequence CBRACKET
+		{ TyList $2 }
 
 TyFieldSeq:
 	{ [] }

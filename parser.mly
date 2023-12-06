@@ -38,6 +38,7 @@
 
 %token <int> INTV
 %token <string> IDV
+%token <string> IDT
 %token <string> STRINGV
 
 %start s
@@ -46,12 +47,14 @@
 %%
 
 s :
-  	IDV EQ term EOF
-  		{ Bind ($1, $3) }
-	| term EOF
+	term EOF
 		{ Eval $1 }
-	// | term AS ty EOF
-	// 	{ Evalty ($1, $3) }
+  	| IDV EQ term EOF
+  		{ Bind ($1, $3) }
+	| IDT EQ ty EOF
+		{ BindTy ($1, $3) }
+	| IDT EOF
+		{ EvalTy $1}
 
 term :
     appTerm

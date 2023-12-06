@@ -46,6 +46,8 @@ type contextv =
 type action =
 	Eval of term
 	| Bind of string * term
+	| EvalTy of string
+	| BindTy of string * ty
 ;;
 
 (* CONTEXT MANAGEMENT *)
@@ -148,7 +150,7 @@ let rec typeof ctx tm = match tm with
 
 	(* T-Var *)
 	| TmVar x ->
-		(try getbinding ctx x with
+		(try getdef ctx x with
 		_ -> raise (Type_error ("no binding type for variable " ^ x)))
 
 	(* T-Abs *)
@@ -240,7 +242,6 @@ let rec typeof ctx tm = match tm with
 				in types s ty4
 			| _ -> if typeof ctx x = ty then ty
 					else raise (Type_error "ascription term's type doesn't match ascription's type"))
-		
 ;;
 
 
@@ -650,6 +651,13 @@ let execute (ctxv, ctxty) = function
 			| _ ->
 				print_endline(s ^ " : " ^ string_of_ty ty_tm ^ " = " ^ string_of_term tm');
 				(adddef ctxv s tm', addbinding ctxty s ty_tm))
+	| EvalTy s ->
+		let ty = getbinding ctxty s in
+		print_endline("- : " ^ string_of_ty ty);
+		(ctxv, ctxty)
+	| BindTy (s, ty) ->
+		print_endline("type " ^ s ^ " : " ^ string_of_ty ty);
+		(ctxv, addbinding ctxty s ty)
 ;;
 
 

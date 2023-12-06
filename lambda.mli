@@ -44,6 +44,8 @@ type contextv =
 type action =
     Eval of term
     | Bind of string * term
+	| EvalTy of string
+	| BindTy of string * ty
 ;;
 
 val emptyctx : contextty;;

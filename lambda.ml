@@ -9,7 +9,7 @@ type ty =
 	| TyTuple of ty list
 	| TyRecord of (string * ty) list
 	| TyVariant of (string * ty) list
-	| TmVarTy of string
+	| TyVar of string
 	| TyList of ty list
 ;;
 
@@ -109,7 +109,7 @@ let rec string_of_ty ctxty ty = match ty with
 			| ((s,ty)::[]) -> s ^ ":" ^ (string_of_ty ctxty ty)
 			| ((s,ty)::t) -> s ^ ":" ^ (string_of_ty ctxty ty) ^ " , " ^ print t
 		in "<" ^ (print tyfseq) ^ ">"
-	| TmVarTy sty ->
+	| TyVar sty ->
 		let ty = getbinding ctxty sty in
 		string_of_ty ctxty ty
 	| TyList tyseq ->
@@ -165,14 +165,10 @@ let rec typeof ctx tm = match tm with
 		(try getbinding ctx x with
 		_ -> raise (Type_error ("no binding type for variable " ^ x)))
 
-	(* | TmVarTy x ->
-		(try getbinding ctx x with
-		_ -> raise (Type_error ("no binding type for variable " ^ x))) *)
-		(* lambda x : N. x *)
 	(* T-Abs *)
 	| TmAbs (x, tyT1S, t2) ->
 		(match (tyT1S) with
-			TmVarTy (s) ->
+			TyVar (s) ->
 				let tyT1 = getbinding ctx s in
 				let ctx' = addbinding ctx x tyT1 in
 				let tyT2 = typeof ctx' t2 in
@@ -263,7 +259,7 @@ let rec typeof ctx tm = match tm with
 							else
 								types s' t2
 				in types s tyTy
-			|(TyVariant (variant), TmVarTy (sty)) ->
+			|(TyVariant (variant), TyVar (sty)) ->
 				let tyVar = getbinding ctx sty in
 					(match tyVar with
 						TyVariant (tyTy) ->
@@ -282,7 +278,7 @@ let rec typeof ctx tm = match tm with
 							raise (Type_error "ascription term's type doesn't match ascription's type"))
 			| _ -> 
 				match ty with
-					TmVarTy (sty) ->
+					TyVar (sty) ->
 						let tyVar = getbinding ctx sty in
 						if typeof ctx x = tyVar then tyVar
 						else 

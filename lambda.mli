@@ -7,7 +7,7 @@ type ty =
 	| TyTuple of ty list
 	| TyRecord of (string * ty) list
     | TyVariant of (string * ty) list
-	| TmVarTy of string
+	| TyVar of string
 	| TyList of ty list
 ;;
 

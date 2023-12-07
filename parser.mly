@@ -162,7 +162,7 @@ atomicTy :
 	| LVAR TyFieldSeq RVAR
 		{ TyVariant $2 }
 	| IDT
-		{ TmVarTy $1}
+		{ TyVar $1}
 	| OBRACKET TySequence CBRACKET
 		{ TyList $2 }
 

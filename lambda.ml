@@ -299,13 +299,8 @@ let rec typeof ctx tm = match tm with
 					TyList type'
 				|(ty', TmCons (type1, head1, tail1)) when (ty'=type') && (type1=type') ->
 					types type1 head1 tail1
-				|(ty', TyList (TmCons (type1, head1, tail1))) when (ty'=type') && (type1=type') ->
-					types type1 head1 tail1
-				|(ty', t) ->
-					let type1 = typeof ctx t
-					
-					if type1 = TyList()
-					types type1 head1 tail1
+				|(ty', a) when (ty' = type') && (typeof ctx a = TyList(type'))->
+					TyList type'
 				|(_,_) -> raise(Type_error("List is not homogeneous")))
 		in types ty t1 t2
 	
@@ -726,7 +721,7 @@ let rec eval1 ctx tm = match tm with
 	| TmVar s ->
 		getdef ctx s
 	
-		|TmCons(ty,h,t) when isval h -> TmCons(ty,h,(eval1 ctx t))
+	|TmCons(ty,h,t) when isval h -> TmCons(ty,h,(eval1 ctx t))
 
 	(* E-Cons1 *)
 	|TmCons(ty,h,t) -> TmCons(ty,(eval1 ctx h),t)

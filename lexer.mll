@@ -32,6 +32,10 @@ rule token = parse
 	| "head"      { HEAD }
 	| "tail"      { TAIL }
 	| "List"      { LIST }
+	| "case"      { CASE }
+	| "of"        { OF }
+	| '|'         { PIPE }
+	| "=>"        { EARROW }
 	| '['         { OBRACKET }
 	| ']'         { CBRACKET }
 	| '<'         { LVAR }

@@ -28,7 +28,11 @@
 %token HEAD
 %token TAIL
 %token LIST
+%token CASE
+%token OF
 
+%token PIPE
+%token EARROW
 %token OBRACKET
 %token CBRACKET
 %token LVAR
@@ -101,6 +105,8 @@ appTerm :
 		{ TmTail ($3, $5) }
 	| NIL OBRACKET ty CBRACKET 
 		{ TmNil $3 }
+	| CASE accessTerm OF TmMatch
+		{ TmCase ($2, $4) }
 	| appTerm AS ty
 		{ TmAscr ($1, $3) }
 	| appTerm accessTerm
@@ -154,6 +160,13 @@ non_empty:
 	| IDV EQ term COMMA non_empty
 		{($1, $3)::$5}
 
+TmMatch:
+	TmVariant EARROW LPAREN appTerm RPAREN 
+		{ [($1, $4)] }
+	| TmVariant EARROW LPAREN appTerm RPAREN PIPE TmMatch
+		{ ($1, $4)::$7 }
+
+
 ty :
 	atomicTy
 		{ $1 }
@@ -196,3 +209,9 @@ TySequence:
 		{ [$1] }
 	| ty COMMA TySequence
 		{ $1::$3 }
+
+TyMatch:
+	TyVariant EARROW LPAREN ty RPAREN
+		{ [($1, $4)] }
+	| TyVariant EARROW LPAREN ty RPAREN PIPE TyMatch
+		{ ($1, $4)::$7 }

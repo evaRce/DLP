@@ -44,6 +44,7 @@ type term =
 	| TmIsNil of ty * term
 	| TmHead of ty * term
 	| TmTail of ty * term
+	| TmCase of term * (term list)
 ;;
 
 type contextv =
@@ -321,6 +322,15 @@ let rec typeof ctx tm = match tm with
 		if typeof ctx t = TyList(ty) then TyList (ty)
 		else 
 			raise (Type_error ("argument of tail is not a List [" ^ (string_of_ty ctx ty) ^ "]"))
+	| TmCase (tm, tmList) ->
+		let rec types tmList' = 
+			match tmList' with
+				[] -> raise (Type_error "term doesn't match any clause")
+				| ((variant,out)::t) when (typeof ctx variant = typeof ctx tm )->
+					typeof ctx out
+				| (_::t) ->
+					types t
+		in types tmList
 ;;
 
 
@@ -392,6 +402,12 @@ let rec string_of_term ctxty = function
 	| TmIsNil (ty,t) -> "isnil[" ^string_of_ty ctxty ty ^ "] " ^ "(" ^ string_of_term ctxty t ^ ")" 
 	| TmHead (ty,t) -> "head[" ^string_of_ty ctxty ty ^ "] " ^ "(" ^ string_of_term ctxty t ^ ")" 
 	| TmTail (ty,t) -> "tail[" ^string_of_ty ctxty ty ^ "] " ^ "(" ^ string_of_term ctxty t ^ ")"
+	| TmCase (tm, tmList) ->
+		let rec print = function
+			[] -> ""
+			| ((variant,out)::t) -> 
+				  "| " ^ string_of_term ctxty variant ^ " => ( " ^ string_of_term ctxty out ^ " )" ^ print t
+		in "case" ^ string_of_term ctxty tm ^ " of " ^ (print tmList)
 	
 ;;
 

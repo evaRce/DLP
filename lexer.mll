@@ -15,8 +15,8 @@ rule token = parse
 	| "else"      { ELSE }
 	| "succ"      { SUCC }
 	| "pred"      { PRED }
-	| "head"      { HEAD }
-	| "tail"      { TAIL }
+	| "strhead"   { STRHEAD }
+	| "strtail"   { STRTAIL }
 	| "iszero"    { ISZERO }
 	| "let"       { LET }
 	| "letrec"    { LETREC }
@@ -26,6 +26,12 @@ rule token = parse
 	| "Nat"       { NAT }
 	| "String"    { STRING }
 	| "as"        { AS }
+	| "nil"       { NIL }
+	| "cons"      { CONS }
+	| "isnil"     { ISNIL }
+	| "head"      { HEAD }
+	| "tail"      { TAIL }
+	| "List"      { LIST }
 	| '['         { OBRACKET }
 	| ']'         { CBRACKET }
 	| '<'         { LVAR }

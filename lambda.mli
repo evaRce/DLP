@@ -8,7 +8,7 @@ type ty =
 	| TyRecord of (string * ty) list
     | TyVariant of (string * ty) list
 	| TyVar of string
-	| TyList of ty list
+	| TyList of ty
 ;;
 
 type contextty =
@@ -30,14 +30,18 @@ type term =
 	| TmFix of term
 	| TmString of string
 	| TmConcat of term * term
-	| TmHead of term
-	| TmTail of term
+	| TmStrHead of term
+	| TmStrTail of term
 	| TmTuple of term list
 	| TmRecord of (string * term) list
     | TmVariant of (string * term) list
 	| TmGet of term * string
 	| TmAscr of term * ty
-	| TmList of term list
+	| TmNil of ty
+	| TmCons of ty * term * term
+	| TmIsNil of ty * term
+	| TmHead of ty * term
+	| TmTail of ty * term
 ;;
 
 type contextv =

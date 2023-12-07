@@ -11,8 +11,8 @@
 %token ELSE
 %token SUCC
 %token PRED
-%token HEAD
-%token TAIL
+%token STRHEAD
+%token STRTAIL
 %token ISZERO
 %token LET
 %token LETREC
@@ -22,9 +22,15 @@
 %token NAT
 %token STRING
 %token AS
+%token NIL
+%token CONS
+%token ISNIL
+%token HEAD
+%token TAIL
+%token LIST
+
 %token OBRACKET
 %token CBRACKET
-
 %token LVAR
 %token RVAR
 %token LPAREN
@@ -77,14 +83,24 @@ appTerm :
 		{ TmSucc $2 }
 	| PRED accessTerm
 		{ TmPred $2 }
-	| HEAD accessTerm
-		{ TmHead $2}
-	| TAIL accessTerm
-		{ TmTail $2}
+	| STRHEAD accessTerm
+		{ TmStrHead $2}
+	| STRTAIL accessTerm
+		{ TmStrTail $2}
 	| ISZERO accessTerm
 		{ TmIsZero $2 }
 	| CONCAT accessTerm accessTerm
 		{ TmConcat ($2, $3) }
+	| CONS OBRACKET ty CBRACKET accessTerm accessTerm
+		{ TmCons ($3, $5, $6) }
+	| ISNIL OBRACKET ty CBRACKET accessTerm 
+		{ TmIsNil ($3, $5) }
+	| HEAD OBRACKET ty CBRACKET accessTerm 
+		{ TmHead ($3, $5) }
+	| TAIL OBRACKET ty CBRACKET accessTerm 
+		{ TmTail ($3, $5) }
+	| NIL OBRACKET ty CBRACKET 
+		{ TmNil $3 }
 	| appTerm AS ty
 		{ TmAscr ($1, $3) }
 	| appTerm accessTerm
@@ -120,8 +136,6 @@ atomicTerm :
 		{ TmRecord $2 }
 	| LVAR TmFieldSeq RVAR
 		{ TmVariant $2 }
-	| OBRACKET TmSequence CBRACKET
-		{ TmList $2 }
 
 TmSequence:
 	term COMMA TmSequence
@@ -163,8 +177,8 @@ atomicTy :
 		{ TyVariant $2 }
 	| IDT
 		{ TyVar $1}
-	| OBRACKET TySequence CBRACKET
-		{ TyList $2 }
+	| LIST OBRACKET ty CBRACKET
+		{ TyList $3 }
 
 TyFieldSeq:
 	{ [] }

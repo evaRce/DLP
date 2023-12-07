@@ -10,7 +10,7 @@ type ty =
 	| TyRecord of (string * ty) list
 	| TyVariant of (string * ty) list
 	| TyVar of string
-	| TyList of ty list
+	| TyList of ty
 ;;
 
 type contextty =
@@ -32,14 +32,18 @@ type term =
 	| TmFix of term
 	| TmString of string
 	| TmConcat of term * term
-	| TmHead of term
-	| TmTail of term 
+	| TmStrHead of term
+	| TmStrTail of term 
 	| TmTuple of term list
 	| TmRecord of (string * term) list
 	| TmVariant of (string * term) list
 	| TmGet of term * string
 	| TmAscr of term * ty
-	| TmList of term list
+	| TmNil of ty
+	| TmCons of ty * term * term
+	| TmIsNil of ty * term
+	| TmHead of ty * term
+	| TmTail of ty * term
 ;;
 
 type contextv =
@@ -112,12 +116,8 @@ let rec string_of_ty ctxty ty = match ty with
 	| TyVar sty ->
 		let ty = getbinding ctxty sty in
 		string_of_ty ctxty ty
-	| TyList tyseq ->
-		let rec print = function
-			[] -> ""
-			| (ty::[]) -> (string_of_ty ctxty ty)
-			| (ty::t) -> (string_of_ty ctxty ty) ^ " , " ^ print t
-		in "[" ^ (print tyseq) ^ "]"
+	| TyList ty ->
+		"[" ^ string_of_ty ctxty ty ^ "]"
 ;;
 
 exception Type_error of string
@@ -212,11 +212,11 @@ let rec typeof ctx tm = match tm with
 		if typeof ctx t1 = TyString && typeof ctx t2 = TyString then TyString
 		else raise (Type_error "argument of concat is not a string")
 
-	| TmHead t1 ->
+	| TmStrHead t1 ->
 		if typeof ctx t1 = TyString then TyString
 		else raise (Type_error "argument of Head is not a string")
 
-	| TmTail t1 ->
+	| TmStrTail t1 ->
 		if typeof ctx t1 = TyString then TyString
 		else raise (Type_error "argument of Tail is not a string")
 
@@ -287,24 +287,45 @@ let rec typeof ctx tm = match tm with
 						if typeof ctx x = ty then ty
 						else 
 							raise (Type_error "ascription term's type doesn't match ascription's type"))
-	| TmList list ->
-		(match (list) with
-			[] -> TyList []
-			|(tm::[]) ->
-				let ty = typeof ctx tm in
-				TyList [ty]
-			|(tm::t) -> 
-				let ty = typeof ctx tm in
-				let rec types ty' t' = 
-					match t' with
-						[] -> []
-						|(tm2::t2) -> 
-							if ty' = typeof ctx tm2 then
-								((ty')::(types ty' t2))
-							else
-								raise (Type_error "list is not homogeneous")
-				in TyList (ty::(types ty t))
-		)
+
+	(* T-Nil *)
+	| TmNil ty -> TyList ty
+
+	(* T-Cons *)
+	| TmCons (ty, t1, t2) -> 
+		let rec types type' head tail =
+			(match (typeof ctx head, tail) with
+				(ty', TmNil t1') when (ty'=type') && (t1'=type') ->
+					TyList type'
+				|(ty', TmCons (type1, head1, tail1)) when (ty'=type') && (type1=type') ->
+					types type1 head1 tail1
+				|(ty', TyList (TmCons (type1, head1, tail1))) when (ty'=type') && (type1=type') ->
+					types type1 head1 tail1
+				|(ty', t) ->
+					let type1 = typeof ctx t
+					
+					if type1 = TyList()
+					types type1 head1 tail1
+				|(_,_) -> raise(Type_error("List is not homogeneous")))
+		in types ty t1 t2
+	
+	(* T-IsNil *)
+	| TmIsNil (ty,t) ->
+		if typeof ctx t = TyList(ty) then TyBool
+		else 
+			raise (Type_error ("argument of is empty is not a List [" ^ (string_of_ty ctx ty) ^ "]"))
+	
+	(* T-Head *)
+	| TmHead (ty,t) ->
+		if typeof ctx t = TyList(ty) then ty
+		else 
+			raise (Type_error ("argument of head is not a List [" ^ (string_of_ty ctx ty) ^ "]"))
+	
+	(* T-Tail *)
+	| TmTail (ty,t) ->
+		if typeof ctx t = TyList(ty) then TyList (ty)
+		else 
+			raise (Type_error ("argument of tail is not a List [" ^ (string_of_ty ctx ty) ^ "]"))
 ;;
 
 
@@ -345,9 +366,9 @@ let rec string_of_term ctxty = function
 		"\"" ^ s ^ "\""
 	| TmConcat (t1, t2) ->
 		"concat " ^ "(" ^ string_of_term ctxty t1 ^ ")" ^ " " ^ "(" ^ string_of_term ctxty t2 ^ ")"
-	| TmHead t1 ->
+	| TmStrHead t1 ->
 		"head " ^ string_of_term ctxty t1
-	| TmTail t1 ->
+	| TmStrTail t1 ->
 		"tail " ^ string_of_term ctxty t1
 	| TmTuple t1 ->
 		let rec print = function
@@ -371,12 +392,12 @@ let rec string_of_term ctxty = function
 		string_of_term ctxty t ^ "." ^ x
 	| TmAscr (t1, tyS) ->
 		string_of_ty ctxty tyS ^ " = " ^ string_of_term ctxty t1
-	| TmList t1 ->
-		let rec print = function
-			[] -> ""
-			| (tm::[]) -> (string_of_term ctxty tm)
-			| (tm::t) -> (string_of_term ctxty tm) ^ " , " ^ print t
-		in "[" ^ (print t1) ^ "]"
+	| TmNil ty -> "nil[" ^string_of_ty ctxty ty ^ "]"
+	| TmCons (ty,h,t) -> "cons[" ^string_of_ty ctxty ty ^ "] " ^ "(" ^ string_of_term ctxty h ^ " " ^ (string_of_term ctxty t) ^ ")"
+	| TmIsNil (ty,t) -> "isnil[" ^string_of_ty ctxty ty ^ "] " ^ "(" ^ string_of_term ctxty t ^ ")" 
+	| TmHead (ty,t) -> "head[" ^string_of_ty ctxty ty ^ "] " ^ "(" ^ string_of_term ctxty t ^ ")" 
+	| TmTail (ty,t) -> "tail[" ^string_of_ty ctxty ty ^ "] " ^ "(" ^ string_of_term ctxty t ^ ")"
+	
 ;;
 
 let rec ldif l1 l2 = match l1 with
@@ -418,9 +439,9 @@ let rec free_vars tm = match tm with
 		[]
 	| TmConcat (t1, t2) ->
 		lunion (free_vars t1) (free_vars t2)
-	| TmHead t1 ->
+	| TmStrHead t1 ->
 		free_vars t1
-	| TmTail t1 ->
+	| TmStrTail t1 ->
 		free_vars t1
 	| TmTuple t1 ->
 		let rec freeseq = function
@@ -441,11 +462,16 @@ let rec free_vars tm = match tm with
 		free_vars t
 	| TmAscr _ ->
 		[]
-	| TmList t1 ->
-		let rec freeseq = function
-			[] -> []
-			|(tm::t) -> lunion (free_vars tm) (freeseq t)
-		in freeseq t1
+	| TmNil ty ->
+		[]
+	| TmCons (ty,t1,t2) ->
+		lunion (free_vars t1) (free_vars t2)
+	| TmIsNil (ty,t) ->
+		free_vars t
+	| TmHead (ty,t) ->
+		free_vars t
+	| TmTail (ty,t) ->
+		free_vars t
 ;;
 
 let rec fresh_name x l =
@@ -491,10 +517,10 @@ let rec subst x s tm = match tm with
 		TmString st
 	| TmConcat (t1, t2) ->
 		TmConcat (subst x s t1, subst x s t2)
-	| TmHead t1 ->
-		TmHead (subst x s t1)
-	| TmTail t1 ->
-		TmTail (subst x s t1)
+	| TmStrHead t1 ->
+		TmStrHead (subst x s t1)
+	| TmStrTail t1 ->
+		TmStrTail (subst x s t1)
 	| TmTuple tup ->
 		let rec substseq = function
 			[] -> []
@@ -514,11 +540,16 @@ let rec subst x s tm = match tm with
 		TmGet (subst x s t, y)
 	| TmAscr (y, tyY) ->
 		TmAscr (subst x s y, tyY)
-	| TmList list ->
-		let rec substseq = function
-			[] -> []
-			|(tm::t) -> (subst x s tm)::(substseq t)
-		in TmTuple (substseq list)
+	| TmNil ty ->
+		tm
+	| TmCons (ty,t1,t2) ->
+		TmCons (ty, (subst x s t1), (subst x s t2))
+	| TmIsNil (ty,t) ->
+		TmIsNil (ty, (subst x s t))
+	| TmHead (ty,t) ->
+		TmHead (ty, (subst x s t))
+	| TmTail (ty,t) ->
+		TmTail (ty, (subst x s t))
 ;;
 
 let rec isnumericval tm = match tm with
@@ -535,7 +566,8 @@ let rec isval tm = match tm with
 	| TmTuple l -> List.for_all(fun t -> isval(t)) l
 	| TmRecord l -> List.for_all(fun (s,t) -> isval(t)) l
 	| TmVariant l -> List.for_all(fun (s,t) -> isval(t)) l
-	| TmList l -> List.for_all(fun t -> isval(t)) l
+	| TmNil _ -> true
+  	| TmCons(_ty,h,t) -> (isval h) && (isval t)
 	| t when isnumericval t -> true
 	| _ -> false
 ;;
@@ -634,20 +666,20 @@ let rec eval1 ctx tm = match tm with
 		let t1' = eval1 ctx t1 in
 		TmConcat (t1', t2)
 
-	| TmHead (TmString t1) ->
+	| TmStrHead (TmString t1) ->
 		TmString (String.sub t1 0 1)
 
-	| TmHead t1 ->
+	| TmStrHead t1 ->
 		let t1' = eval1 ctx t1 in
-		TmHead t1'
+		TmStrHead t1'
 
-	| TmTail (TmString t1) ->
+	| TmStrTail (TmString t1) ->
 		TmString (String.sub t1 1 ((String.length t1)-1))
 
 
-	| TmTail t1 ->
+	| TmStrTail t1 ->
 		let t1' = eval1 ctx t1 in
-		TmTail t1'
+		TmStrTail t1'
 
 	| TmTuple t1 ->
 		let rec seq_eval = function
@@ -694,12 +726,31 @@ let rec eval1 ctx tm = match tm with
 	| TmVar s ->
 		getdef ctx s
 	
-	| TmList t1 ->
-		let rec seq_eval = function
-			[] -> raise NoRuleApplies
-			|(tm::t) when isval tm -> tm::(seq_eval t)
-			|(tm::t) -> (eval1 ctx tm)::t
-		in TmList (seq_eval t1)
+		|TmCons(ty,h,t) when isval h -> TmCons(ty,h,(eval1 ctx t))
+
+	(* E-Cons1 *)
+	|TmCons(ty,h,t) -> TmCons(ty,(eval1 ctx h),t)
+
+	(* E-IsNilNil *)
+	|TmIsNil(ty,TmNil(_)) -> TmTrue
+
+	(* E-IsNilCons *)
+	|TmIsNil(ty,TmCons (_,_,_) ) -> TmFalse
+
+	(* E-IsNil *)
+	|TmIsNil(ty,t) -> TmIsNil(ty,eval1 ctx t)
+
+	(* E-HeadCons *)
+	|TmHead(ty,TmCons(_,h,_))-> h
+
+	(* E-Head *)
+	|TmHead(ty,t) -> TmHead(ty,eval1 ctx t)
+
+	(* E-TailCons *)
+	|TmTail(ty,TmCons(_,_,t)) -> t
+
+	(* E-Tail *)
+	|TmTail(ty,t) -> TmTail(ty,eval1 ctx t)
 
 	| _ ->
 		raise NoRuleApplies

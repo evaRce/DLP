@@ -98,3 +98,36 @@ n5 = <neg=5> as Int;;
 p3 = <pos=3> as <pos:Nat, zero:Bool, neg:Nat>;;
 z0 = <zero=true> as <pos:Nat, zero:Bool, neg:Nat>;;
 n5 = <neg=5> as <pos:Nat, zero:Bool, neg:Nat>;;
+
+()(LIST)#######################################################################
+l1 = cons[Nat] 1 (cons[Nat] 2 (nil[Nat]));;
+l2 = cons[Nat] 3 (cons[Nat] 4 (nil[Nat]));;
+l3 = cons[String] "a" (nil[String]);;
+cons[Nat] 1 l1;;
+cons[String] "a" l1;;
+
+letrec len : (List[Nat]) -> Nat = 
+	lambda l : List[Nat]. 
+		if (isnil[Nat] l) then 
+			0 
+		else 
+			(succ (len (tail[Nat] l)))
+in len l1;;
+
+letrec append: List[Nat] -> List[Nat] -> List[Nat] =
+	lambda l1: List[Nat]. lambda l2: List[Nat].
+		if isnil[Nat] l1 then 
+			l2
+		else 
+			cons[Nat] (head[Nat] l1) (append (tail[Nat] l1) l2) 
+in append l1 l2;;
+
+f = lambda x:Nat . pred x;;
+
+letrec map : List[Nat] -> (Nat -> Nat) -> List[Nat] =
+	lambda lst: List[Nat]. lambda f: (Nat -> Nat). 
+		if (isnil[Nat] (tail[Nat] lst)) then
+			cons[Nat] (f (head[Nat] lst)) (nil[Nat])
+		else
+			cons[Nat] (f (head[Nat] lst)) (map (tail[Nat] lst) f)
+in map l2 f;;

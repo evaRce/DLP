@@ -105,7 +105,7 @@ appTerm :
 		{ TmTail ($3, $5) }
 	| NIL OBRACKET ty CBRACKET 
 		{ TmNil $3 }
-	// | CASE accessTerm OF TmMatch
+	// | CASE accessTerm OF tmMatch
 	// 	{ TmCase ($2, $4) }
 	| appTerm AS ty
 		{ TmAscr ($1, $3) }
@@ -136,20 +136,24 @@ atomicTerm :
 			in f $1 }
 	| STRINGV
 		{ TmString $1 }
-	| LKEY TmSequence RKEY
+	| LKEY tmSequence RKEY
 		{ TmTuple $2 }
-	| LKEY TmFieldSeq RKEY
+	| LKEY tmFieldSeq RKEY
 		{ TmRecord $2 }
-	| LVAR TmFieldSeq RVAR
+	| variantTerm
+		{ $1 }
+
+variantTerm:
+	LVAR tmFieldSeq RVAR
 		{ TmVariant $2 }
 
-TmSequence:
-	term COMMA TmSequence
+tmSequence:
+	term COMMA tmSequence
 		{ $1::$3 }
 	| term
 		{	[$1] }
 
-TmFieldSeq:
+tmFieldSeq:
 	{ [] }
 	| non_empty
 		{ $1 }
@@ -160,10 +164,10 @@ non_empty:
 	| IDV EQ term COMMA non_empty
 		{($1, $3)::$5}
 
-// TmMatch:
-// 	TmVariant EARROW LPAREN appTerm RPAREN 
+// tmMatch:
+// 	variantTerm EARROW LPAREN appTerm RPAREN 
 // 		{ [($1, $4)] }
-// 	| TmVariant EARROW LPAREN appTerm RPAREN PIPE TmMatch
+// 	| variantTerm EARROW LPAREN appTerm RPAREN PIPE tmMatch
 // 		{ ($1, $4)::$7 }
 
 
@@ -182,18 +186,18 @@ atomicTy :
 		{ TyNat }
 	| STRING
 		{ TyString }
-	| LKEY TySequence RKEY
+	| LKEY tySequence RKEY
 		{ TyTuple $2 }
-	| LKEY TyFieldSeq RKEY
+	| LKEY tyFieldSeq RKEY
 		{ TyRecord $2 }
-	| LVAR TyFieldSeq RVAR
+	| LVAR tyFieldSeq RVAR
 		{ TyVariant $2 }
 	| IDT
 		{ TyVar $1}
 	| LIST OBRACKET ty CBRACKET
 		{ TyList $3 }
 
-TyFieldSeq:
+tyFieldSeq:
 	{ [] }
 	| non_empty_ty
 		{ $1 }
@@ -204,14 +208,14 @@ non_empty_ty:
 	| IDV COLON ty COMMA non_empty_ty
 		{($1, $3)::$5}
 
-TySequence:
+tySequence:
 	| ty
 		{ [$1] }
-	| ty COMMA TySequence
+	| ty COMMA tySequence
 		{ $1::$3 }
 
-// TyMatch:
+// tyMatch:
 // 	TyVariant EARROW LPAREN ty RPAREN
 // 		{ [($1, $4)] }
-// 	| TyVariant EARROW LPAREN ty RPAREN PIPE TyMatch
+// 	| TyVariant EARROW LPAREN ty RPAREN PIPE tyMatch
 // 		{ ($1, $4)::$7 }

@@ -136,11 +136,12 @@ let rec typeof ctx tm = match tm with
 	(* T-If *)
 	| TmIf (t1, t2, t3) ->
 		if typeof ctx t1 = TyBool then
-		let tyT2 = typeof ctx t2 in
-		if typeof ctx t3 = tyT2 then tyT2
-		else raise (Type_error "arms of conditional have different types")
+			let tyT2 = typeof ctx t2 in
+			if typeof ctx t3 = tyT2 then tyT2
+			else 
+				raise (Type_error "arms of conditional have different types")
 		else
-		raise (Type_error "guard of conditional not a boolean")
+			raise (Type_error "guard of conditional not a boolean")
 
 	(* T-Zero *)
 	| TmZero ->
@@ -238,7 +239,7 @@ let rec typeof ctx tm = match tm with
 		in TyVariant (types t1)
 	| TmGet (t, x) ->
 		(match(typeof ctx t, x) with
-			|(TyRecord (reco), s) ->
+			(TyRecord (reco), s) ->
 				(try List.assoc s reco with
 				_ -> raise (Type_error (s ^ " key doesn't exist in record")))
 
@@ -248,7 +249,7 @@ let rec typeof ctx tm = match tm with
 			|(y,_) -> raise (Type_error("Expected tuple or record type, got " ^ string_of_ty ctx y)))
 	| TmAscr (x,ty) ->
 		(match(typeof ctx x, ty) with
-			|(TyVariant (variant), TyVariant (tyTy)) ->
+			(TyVariant (variant), TyVariant (tyTy)) ->
 				let (s,tm) = List.nth variant 0 in
 				let rec types s' ty' = match ty' with
 					[] -> raise (Type_error "Field isn't found in the type passed to the ascription")
@@ -351,8 +352,8 @@ let rec string_of_term ctxty = function
 	| TmSucc t ->
 		let rec f n t' = match t' with
 			TmZero -> string_of_int n
-		| TmSucc s -> f (n+1) s
-		| _ -> "succ " ^ "(" ^ string_of_term ctxty t ^ ")"
+			| TmSucc s -> f (n+1) s
+			| _ -> "succ " ^ "(" ^ string_of_term ctxty t ^ ")"
 		in f 1 t
 	| TmPred t ->
 		"pred " ^ "(" ^ string_of_term ctxty t ^ ")"
@@ -398,11 +399,16 @@ let rec string_of_term ctxty = function
 		string_of_term ctxty t ^ "." ^ x
 	| TmAscr (t1, tyS) ->
 		string_of_ty ctxty tyS ^ " = " ^ string_of_term ctxty t1
-	| TmNil ty -> "nil[" ^string_of_ty ctxty ty ^ "]"
-	| TmCons (ty,h,t) -> "cons[" ^string_of_ty ctxty ty ^ "] " ^ "(" ^ string_of_term ctxty h ^ " " ^ (string_of_term ctxty t) ^ ")"
-	| TmIsNil (ty,t) -> "isnil[" ^string_of_ty ctxty ty ^ "] " ^ "(" ^ string_of_term ctxty t ^ ")" 
-	| TmHead (ty,t) -> "head[" ^string_of_ty ctxty ty ^ "] " ^ "(" ^ string_of_term ctxty t ^ ")" 
-	| TmTail (ty,t) -> "tail[" ^string_of_ty ctxty ty ^ "] " ^ "(" ^ string_of_term ctxty t ^ ")"
+	| TmNil ty ->
+		"nil[" ^ string_of_ty ctxty ty ^ "]"
+	| TmCons (ty,h,t) ->
+		"cons[" ^ string_of_ty ctxty ty ^ "] " ^ "(" ^ string_of_term ctxty h ^ " " ^ (string_of_term ctxty t) ^ ")"
+	| TmIsNil (ty,t) ->
+		"isnil[" ^ string_of_ty ctxty ty ^ "] " ^ "(" ^ string_of_term ctxty t ^ ")" 
+	| TmHead (ty,t) ->
+		"head[" ^ string_of_ty ctxty ty ^ "] " ^ "(" ^ string_of_term ctxty t ^ ")" 
+	| TmTail (ty,t) ->
+		"tail[" ^ string_of_ty ctxty ty ^ "] " ^ "(" ^ string_of_term ctxty t ^ ")"
 	(* | TmCase (tm, tmList) ->
 		let rec print = function
 			[] -> ""
@@ -509,7 +515,8 @@ let rec subst x s tm = match tm with
 	| TmIsZero t ->
 		TmIsZero (subst x s t)
 	| TmVar y ->
-		if y = x then s else tm
+		if y = x then s 
+		else tm
 	| TmAbs (y, tyY, t) ->
 		if y = x then tm
 		else let fvs = free_vars s in
@@ -521,11 +528,12 @@ let rec subst x s tm = match tm with
 		TmApp (subst x s t1, subst x s t2)
 	| TmLetIn (y, t1, t2) ->
 		if y = x then TmLetIn (y, subst x s t1, t2)
-		else let fvs = free_vars s in
-			if not (List.mem y fvs)
-			then TmLetIn (y, subst x s t1, subst x s t2)
-			else let z = fresh_name y (free_vars t2 @ fvs) in
-				TmLetIn (z, subst x s t1, subst x s (subst y (TmVar z) t2))
+		else 
+			let fvs = free_vars s in
+				if not (List.mem y fvs) then
+					TmLetIn (y, subst x s t1, subst x s t2)
+				else let z = fresh_name y (free_vars t2 @ fvs) 
+			in TmLetIn (z, subst x s t1, subst x s (subst y (TmVar z) t2))
 	| TmFix t ->
 		TmFix (subst x s t)
 	| TmString st ->
@@ -741,31 +749,40 @@ let rec eval1 ctx tm = match tm with
 		getdef ctx s
 	
 	(*  E-Cons2 *)
-	|TmCons(ty,h,t) when isval h -> TmCons(ty,h,(eval1 ctx t))
+	| TmCons(ty,h,t) when isval h ->
+		TmCons(ty,h,(eval1 ctx t))
 
 	(* E-Cons1 *)
-	|TmCons(ty,h,t) -> TmCons(ty,(eval1 ctx h),t)
+	| TmCons(ty,h,t) ->
+		TmCons(ty,(eval1 ctx h),t)
 
 	(* E-IsNilNil *)
-	|TmIsNil(ty,TmNil(_)) -> TmTrue
+	| TmIsNil(ty,TmNil(_)) ->
+		TmTrue
 
 	(* E-IsNilCons *)
-	|TmIsNil(ty,TmCons (_,_,_) ) -> TmFalse
+	| TmIsNil(ty,TmCons (_,_,_) ) ->
+		TmFalse
 
 	(* E-IsNil *)
-	|TmIsNil(ty,t) -> TmIsNil(ty,eval1 ctx t)
+	| TmIsNil(ty,t) ->
+		TmIsNil(ty,eval1 ctx t)
 
 	(* E-HeadCons *)
-	|TmHead(ty,TmCons(_,h,_))-> h
+	| TmHead(ty,TmCons(_,h,_))->
+		h
 
 	(* E-Head *)
-	|TmHead(ty,t) -> TmHead(ty,eval1 ctx t)
+	| TmHead(ty,t) ->
+		TmHead(ty,eval1 ctx t)
 
 	(* E-TailCons *)
-	|TmTail(ty,TmCons(_,_,t)) -> t
+	| TmTail(ty,TmCons(_,_,t)) ->
+		t
 
 	(* E-Tail *)
-	|TmTail(ty,t) -> TmTail(ty,eval1 ctx t)
+	| TmTail(ty,t) ->
+		TmTail(ty,eval1 ctx t)
 
 	(* E-CaseVariant *)
 	(* | TmCase (TmVariant (s,v1), tmList) when isval(v1)->

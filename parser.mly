@@ -105,8 +105,8 @@ appTerm :
 		{ TmTail ($3, $5) }
 	| NIL OBRACKET ty CBRACKET 
 		{ TmNil $3 }
-	// | CASE accessTerm OF tmMatch
-	// 	{ TmCase ($2, $4) }
+	| CASE accessTerm OF tmMatch
+		{ TmCase ($2, $4) }
 	| appTerm AS ty
 		{ TmAscr ($1, $3) }
 	| appTerm accessTerm
@@ -164,11 +164,11 @@ non_empty:
 	| IDV EQ term COMMA non_empty
 		{($1, $3)::$5}
 
-// tmMatch:
-// 	variantTerm EARROW LPAREN appTerm RPAREN 
-// 		{ [($1, $4)] }
-// 	| variantTerm EARROW LPAREN appTerm RPAREN PIPE tmMatch
-// 		{ ($1, $4)::$7 }
+tmMatch:
+	variantTerm EARROW LPAREN appTerm RPAREN 
+		{ [($1, $4)] }
+	| variantTerm EARROW LPAREN appTerm RPAREN PIPE tmMatch
+		{ ($1, $4)::$7 }
 
 
 ty :
@@ -214,8 +214,12 @@ tySequence:
 	| ty COMMA tySequence
 		{ $1::$3 }
 
-// tyMatch:
-// 	TyVariant EARROW LPAREN ty RPAREN
-// 		{ [($1, $4)] }
-// 	| TyVariant EARROW LPAREN ty RPAREN PIPE tyMatch
-// 		{ ($1, $4)::$7 }
+tyMatch:
+	variantTy EARROW LPAREN ty RPAREN
+		{ [($1, $4)] }
+	| variantTy EARROW LPAREN ty RPAREN PIPE tyMatch
+		{ ($1, $4)::$7 }
+
+variantTy:
+	LVAR tyFieldSeq RVAR
+		{ TyVariant $2 }

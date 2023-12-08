@@ -44,7 +44,7 @@ type term =
 	| TmIsNil of ty * term
 	| TmHead of ty * term
 	| TmTail of ty * term
-	(* | TmCase of term * (term list) *)
+	| TmCase of term * ((term * term) list)
 ;;
 
 type contextv =
@@ -122,6 +122,26 @@ let rec string_of_ty ctxty ty = match ty with
 ;;
 
 exception Type_error of string
+;;
+
+let rec isnumericval tm = match tm with
+	TmZero -> true
+	| TmSucc t -> isnumericval t
+	| _ -> false
+;;
+
+let rec isval tm = match tm with
+	TmTrue  -> true
+	| TmFalse -> true
+	| TmAbs _ -> true
+	| TmString _ -> true
+	| TmTuple l -> List.for_all(fun t -> isval(t)) l
+	| TmRecord l -> List.for_all(fun (s,t) -> isval(t)) l
+	| TmVariant l -> List.for_all(fun (s,t) -> isval(t)) l
+	| TmNil _ -> true
+  	| TmCons(_ty,h,t) -> (isval h) && (isval t)
+	| t when isnumericval t -> true
+	| _ -> false
 ;;
 
 let rec typeof ctx tm = match tm with
@@ -248,6 +268,7 @@ let rec typeof ctx tm = match tm with
 				_ -> raise (Type_error (s ^ " is out of bounds for this tuple")))
 			|(y,_) -> raise (Type_error("Expected tuple or record type, got " ^ string_of_ty ctx y)))
 	| TmAscr (x,ty) ->
+		print_endline("entree");
 		(match(typeof ctx x, ty) with
 			(TyVariant (variant), TyVariant (tyTy)) ->
 				let (s,tm) = List.nth variant 0 in
@@ -262,6 +283,7 @@ let rec typeof ctx tm = match tm with
 								types s' t2
 				in types s tyTy
 			|(TyVariant (variant), TyVar (sty)) ->
+				print_endline("AS");
 				let tyVar = getbinding ctx sty in
 					(match tyVar with
 						TyVariant (tyTy) ->
@@ -323,16 +345,23 @@ let rec typeof ctx tm = match tm with
 		if typeof ctx t = TyList(ty) then TyList (ty)
 		else 
 			raise (Type_error ("argument of tail is not a List [" ^ (string_of_ty ctx ty) ^ "]"))
-	(* | TmCase (tm, tmList) ->
+
+	| TmCase (tm, tmList) ->
 		let rec types = function
 			[] -> raise (Type_error "term doesn't match any clause")
 			| (h::t) ->
-				let variant, out = h in
-				if (TyVariant variant) = (typeof ctx tm ) then
-					typeof ctx out
-				else
-					types t
-		in types tmList *)
+				(match  h with
+					(TmVariant (variant), out) ->
+						let (field, value) = List.nth variant 0 in
+						if (isval value) then 
+							if (typeof ctx (TmVariant variant)) = (typeof ctx tm ) then
+								typeof ctx out
+							else
+								types t
+						else
+							typeof ctx out 
+					| _ -> raise (Type_error "is not TmVariant"))
+		in types tmList
 ;;
 
 
@@ -409,12 +438,12 @@ let rec string_of_term ctxty = function
 		"head[" ^ string_of_ty ctxty ty ^ "] " ^ "(" ^ string_of_term ctxty t ^ ")" 
 	| TmTail (ty,t) ->
 		"tail[" ^ string_of_ty ctxty ty ^ "] " ^ "(" ^ string_of_term ctxty t ^ ")"
-	(* | TmCase (tm, tmList) ->
+	| TmCase (tm, tmList) ->
 		let rec print = function
 			[] -> ""
 			| ((variant,out)::t) -> 
 				"| " ^ string_of_term ctxty variant ^ " => ( " ^ string_of_term ctxty out ^ " )" ^ print t
-		in "case" ^ string_of_term ctxty tm ^ " of " ^ (print tmList) *)
+		in "case" ^ string_of_term ctxty tm ^ " of " ^ (print tmList)
 	
 ;;
 
@@ -490,8 +519,8 @@ let rec free_vars tm = match tm with
 		free_vars t
 	| TmTail (ty,t) ->
 		free_vars t
-	(* | TmCase ((_,tm), tmList) ->
-		free_vars tm *)
+	| TmCase (tm, tmList) ->
+		free_vars tm
 
 ;;
 
@@ -573,27 +602,10 @@ let rec subst x s tm = match tm with
 		TmHead (ty, (subst x s t))
 	| TmTail (ty,t) ->
 		TmTail (ty, (subst x s t))
+	| TmCase (tm, tmList) ->
+		TmCase (subst x s tm, tmList)
 ;;
 
-let rec isnumericval tm = match tm with
-	TmZero -> true
-	| TmSucc t -> isnumericval t
-	| _ -> false
-;;
-
-let rec isval tm = match tm with
-	TmTrue  -> true
-	| TmFalse -> true
-	| TmAbs _ -> true
-	| TmString _ -> true
-	| TmTuple l -> List.for_all(fun t -> isval(t)) l
-	| TmRecord l -> List.for_all(fun (s,t) -> isval(t)) l
-	| TmVariant l -> List.for_all(fun (s,t) -> isval(t)) l
-	| TmNil _ -> true
-  	| TmCons(_ty,h,t) -> (isval h) && (isval t)
-	| t when isnumericval t -> true
-	| _ -> false
-;;
 
 exception NoRuleApplies
 ;;
@@ -785,16 +797,33 @@ let rec eval1 ctx tm = match tm with
 		TmTail(ty,eval1 ctx t)
 
 	(* E-CaseVariant *)
-	(* | TmCase (TmVariant (s,v1), tmList) when isval(v1)->
+	| TmCase (TmVariant t1, tmList) when isval (TmVariant t1) ->
+		let (s,v1) = List.nth t1 0 in
 		let rec field_seq_eval = function
 			[] -> raise NoRuleApplies
-			|(((st,tm), out)::t) when (isval tm) && (s=st) -> 
-				subst v1 tm out
-		in field_seq_eval tmList *)
-
+			| (h::t) ->
+				let (variant, out) = h in
+				(match (variant, out) with
+					(TmVariant t1', TmAscr (TmVariant termm, ty)) ->
+						let (st,tm) = List.nth t1' 0 in
+						(match termm with 
+							(h1::[]) ->
+								let (st', v2) = h1 in
+								(match v2 with
+									TmVar s when (s=st) ->
+										subst s v1 out
+									| _  ->
+										if (isval v2) && (s=st) then
+											out
+										else
+											field_seq_eval t)
+							| _ -> raise NoRuleApplies)
+					| _ -> raise NoRuleApplies)
+		in field_seq_eval tmList
+			
 	(* E-Case *)
-	(* | TmCase (tm, tmList) ->
-		TmCase (eval1 ctx tm, tmList) *)
+	| TmCase (tm, tmList) ->
+		TmCase (eval1 ctx tm, tmList)
 
 	| _ ->
 		raise NoRuleApplies
@@ -841,5 +870,3 @@ let execute (ctxv, ctxty) = function
 		print_endline("type " ^ s ^ " : " ^ string_of_ty ctxty ty);
 		(ctxv, addbinding ctxty s ty)
 ;;
-
-

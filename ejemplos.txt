@@ -33,7 +33,7 @@ letrec prod : Nat -> Nat -> Nat =
 in
 letrec fac : Nat -> Nat =
     lambda n : Nat. if iszero n then 1 else prod n (fac (pred n))
-in fac 3;; 
+in fac 3;;
 
 
 (2.2)(CONTEXTO DE DEFINICIONES GLOBALES)##########################################
@@ -42,31 +42,43 @@ id = lambda x : Bool. x;;
 id x;;
 
 fib = letrec sum : Nat -> Nat -> Nat =
-    lambda n : Nat. lambda m : Nat. if iszero n then m else succ (sum (pred n) m)
+    lambda n : Nat. lambda m : Nat. 
+		if iszero n then 
+			m
+		else succ (sum (pred n) m)
 in
 letrec fib : Nat -> Nat =
-    lambda n : Nat. if iszero n then 0 else if iszero (pred n) then 1 else sum (fib (pred n)) (fib (pred (pred n)))
+    lambda n : Nat. 
+		if iszero n then 
+			0
+		else 
+			if iszero (pred n) then 
+				1
+			else sum (fib (pred n)) (fib (pred (pred n)))
 in fib;;
 fib 7;;
+
+N = Nat;;
+lambda x : N. x;;
 
 
 (2.3)(STRING)#####################################################################
 "";;
-
 "abc";;
-
 concat "para" "sol";;
-
 concat (concat "para" "sol") "es";;
-
 lambda s : String. s;;
-
 (lambda s : String. s) "abc" ;;
 
 letrec replicate : String -> Nat -> String =
     lambda s : String. lambda n : Nat.
         if iszero n then "" else concat s (replicate s (pred n))
 in replicate "abc" 3;;
+
+(StrHead and StrTail)
+s = "dlp";;
+strhead s;;
+strtail s;;
 
 
 (2.4)(TUPLES)##################################################################
@@ -87,32 +99,39 @@ r.num.x;;
 
 (ASCRIPTION)###################################################################
 1 as Nat;;
-1 as Bool;;  (*Falla*)
+"dlp" as String;;
 
 (2.7)(VARIANTS)###############################################################
-
 Int = <pos:Nat, zero:Bool, neg:Nat>;;
 p3 = <pos=3> as Int;;
 z0 = <zero=true> as Int;;
 n5 = <neg=5> as Int;;
-p3 = <pos=3> as <pos:Nat, zero:Bool, neg:Nat>;;
-z0 = <zero=true> as <pos:Nat, zero:Bool, neg:Nat>;;
-n5 = <neg=5> as <pos:Nat, zero:Bool, neg:Nat>;;
 
-()(LIST)#######################################################################
+abs = L i : Int.
+	case i of
+		<pos=p> => (<pos=p> as Int)
+		| <zero=z> => (<zero=true> as Int)
+		| <neg=n> => (<pos=n> as Int)
+;;
+abs p3;;
+abs z0;;
+abs n5;;
+
+
+(2.8)(LISTS)#######################################################################
 l1 = cons[Nat] 1 (cons[Nat] 2 (nil[Nat]));;
 l2 = cons[Nat] 3 (cons[Nat] 4 (nil[Nat]));;
 l3 = cons[String] "a" (nil[String]);;
 cons[Nat] 1 l1;;
 cons[String] "a" l1;;
 
-letrec len : (List[Nat]) -> Nat = 
+letrec length : (List[Nat]) -> Nat = 
 	lambda l : List[Nat]. 
 		if (isnil[Nat] l) then 
 			0 
 		else 
-			(succ (len (tail[Nat] l)))
-in len l1;;
+			(succ (length (tail[Nat] l)))
+in length l1;;
 
 letrec append: List[Nat] -> List[Nat] -> List[Nat] =
 	lambda l1: List[Nat]. lambda l2: List[Nat].

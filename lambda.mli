@@ -42,7 +42,7 @@ type term =
 	| TmIsNil of ty * term
 	| TmHead of ty * term
 	| TmTail of ty * term
-	| TmCase of term * (term list)
+	(* | TmCase of term * (term list) *)
 ;;
 
 type contextv =

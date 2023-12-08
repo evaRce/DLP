@@ -44,7 +44,7 @@ type term =
 	| TmIsNil of ty * term
 	| TmHead of ty * term
 	| TmTail of ty * term
-	| TmCase of term * (term list)
+	(* | TmCase of term * (term list) *)
 ;;
 
 type contextv =
@@ -322,15 +322,16 @@ let rec typeof ctx tm = match tm with
 		if typeof ctx t = TyList(ty) then TyList (ty)
 		else 
 			raise (Type_error ("argument of tail is not a List [" ^ (string_of_ty ctx ty) ^ "]"))
-	| TmCase (tm, tmList) ->
-		let rec types tmList' = 
-			match tmList' with
-				[] -> raise (Type_error "term doesn't match any clause")
-				| ((variant,out)::t) when (typeof ctx variant = typeof ctx tm )->
+	(* | TmCase (tm, tmList) ->
+		let rec types = function
+			[] -> raise (Type_error "term doesn't match any clause")
+			| (h::t) ->
+				let variant, out = h in
+				if (TyVariant variant) = (typeof ctx tm ) then
 					typeof ctx out
-				| (_::t) ->
+				else
 					types t
-		in types tmList
+		in types tmList *)
 ;;
 
 
@@ -402,12 +403,12 @@ let rec string_of_term ctxty = function
 	| TmIsNil (ty,t) -> "isnil[" ^string_of_ty ctxty ty ^ "] " ^ "(" ^ string_of_term ctxty t ^ ")" 
 	| TmHead (ty,t) -> "head[" ^string_of_ty ctxty ty ^ "] " ^ "(" ^ string_of_term ctxty t ^ ")" 
 	| TmTail (ty,t) -> "tail[" ^string_of_ty ctxty ty ^ "] " ^ "(" ^ string_of_term ctxty t ^ ")"
-	| TmCase (tm, tmList) ->
+	(* | TmCase (tm, tmList) ->
 		let rec print = function
 			[] -> ""
 			| ((variant,out)::t) -> 
-				  "| " ^ string_of_term ctxty variant ^ " => ( " ^ string_of_term ctxty out ^ " )" ^ print t
-		in "case" ^ string_of_term ctxty tm ^ " of " ^ (print tmList)
+				"| " ^ string_of_term ctxty variant ^ " => ( " ^ string_of_term ctxty out ^ " )" ^ print t
+		in "case" ^ string_of_term ctxty tm ^ " of " ^ (print tmList) *)
 	
 ;;
 
@@ -483,6 +484,9 @@ let rec free_vars tm = match tm with
 		free_vars t
 	| TmTail (ty,t) ->
 		free_vars t
+	(* | TmCase ((_,tm), tmList) ->
+		free_vars tm *)
+
 ;;
 
 let rec fresh_name x l =
@@ -687,7 +691,6 @@ let rec eval1 ctx tm = match tm with
 	| TmStrTail (TmString t1) ->
 		TmString (String.sub t1 1 ((String.length t1)-1))
 
-
 	| TmStrTail t1 ->
 		let t1' = eval1 ctx t1 in
 		TmStrTail t1'
@@ -737,6 +740,7 @@ let rec eval1 ctx tm = match tm with
 	| TmVar s ->
 		getdef ctx s
 	
+	(*  E-Cons2 *)
 	|TmCons(ty,h,t) when isval h -> TmCons(ty,h,(eval1 ctx t))
 
 	(* E-Cons1 *)
@@ -762,6 +766,18 @@ let rec eval1 ctx tm = match tm with
 
 	(* E-Tail *)
 	|TmTail(ty,t) -> TmTail(ty,eval1 ctx t)
+
+	(* E-CaseVariant *)
+	(* | TmCase (TmVariant (s,v1), tmList) when isval(v1)->
+		let rec field_seq_eval = function
+			[] -> raise NoRuleApplies
+			|(((st,tm), out)::t) when (isval tm) && (s=st) -> 
+				subst v1 tm out
+		in field_seq_eval tmList *)
+
+	(* E-Case *)
+	(* | TmCase (tm, tmList) ->
+		TmCase (eval1 ctx tm, tmList) *)
 
 	| _ ->
 		raise NoRuleApplies
